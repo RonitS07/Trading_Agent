@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vanguard Elite - Sovereign Trading Terminal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="vanguard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="pro-theme">
+
+    <header class="top-header glass">
+        <div class="header-content">
+            <div class="brand-section">
+                <div class="logo-morph">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <span class="brand-text">VANGUARD <span class="highlight">ELITE</span></span>
+            </div>
+
+            <nav class="main-nav">
+                <button class="nav-btn active" data-tab="tab-overview">
+                    <i class="fa-solid fa-table-columns"></i> Overview
+                </button>
+                <button class="nav-btn" data-tab="tab-analysis">
+                    <i class="fa-solid fa-chart-line"></i> Terminal
+                </button>
+            </nav>
+
+            <div class="header-actions">
+                <div id="market-status-badge" class="market-tag">NSE/BSE LIVE</div>
+                <div class="user-avatar">RS</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="portfolio-bar glass">
+        <div class="stat-item">
+            <span class="stat-label">Liquidity</span>
+            <span id="port-cash" class="stat-value">₹1,00,000.00</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Exposure</span>
+            <span id="port-invested" class="stat-value">₹0.00</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Net Performance</span>
+            <span id="port-pnl" class="stat-value neutral">0.00 (0.00%)</span>
+        </div>
+        <div class="stat-item highlighted">
+            <span class="stat-label">Total Assets</span>
+            <span id="port-total" class="stat-value">₹1,00,000.00</span>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar-left glass">
+            <div class="search-section">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass search-icon-inner"></i>
+                    <input type="text" id="omnibar-input" placeholder="Search Terminal..." autocomplete="off">
+                    <div id="search-results" class="search-dropdown hidden"></div>
+                </div>
+            </div>
+
+            <div class="sidebar-scroll">
+                <div class="sidebar-section">
+                    <div class="section-header">
+                        <span class="sidebar-title">WATCHLIST</span>
+                    </div>
+                    <div id="watchlist-container" class="watchlist-list"></div>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="section-header">
+                        <span class="sidebar-title">Active Holdings</span>
+                    </div>
+                    <div id="holdings-container" class="watchlist-list">
+                        <div class="empty-state">System Idle - No Holdings</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Dynamic Content -->
+        <main id="tab-container" class="content-area">
+
+            <!-- OVERVIEW TAB -->
+            <div id="tab-overview" class="tab-content active show">
+                <div class="dashboard-grid">
+                    <div class="card glass span-full">
+                        <div class="card-header">
+                            <h3>Performance Analytics</h3>
+                        </div>
+                        <div class="chart-container-mock">
+                            <p class="chart-label">Synthesizing live performance data...</p>
+                        </div>
+                    </div>
+
+                    <div class="card glass">
+                        <div class="card-header">
+                            <h3>Vanguard Intelligence</h3>
+                            <i class="fa-solid fa-microchip"></i>
+                        </div>
+                        <div id="market-ai-advice" class="ai-advice-box">
+                            <p class="blink">Scanning global markets for sovereign signals...</p>
+                        </div>
+                    </div>
+
+                    <div class="card glass">
+                        <div class="card-header">
+                            <h3>Execution Log</h3>
+                            <i class="fa-solid fa-list-check"></i>
+                        </div>
+                        <div id="activity-log" class="activity-log">
+                            <p class="empty-state">No executions in current session</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANALYSIS TAB -->
+            <div id="tab-analysis" class="tab-content">
+                <div class="analysis-view">
+                    <div class="analysis-left">
+                        <section class="card glass stock-profile">
+                            <div class="profile-header">
+                                <div class="symbol-info">
+                                    <h1 id="main-symbol">--</h1>
+                                    <span id="main-name" class="sub-text">Sovereign Equity Asset</span>
+                                </div>
+                                <div id="live-status" class="live-indicator hidden">
+                                    <span class="pulse-dot"></span> SECURE FEED
+                                </div>
+                            </div>
+
+                            <div class="profile-main">
+                                <div class="price-section">
+                                    <div class="price-hero">
+                                        <span id="main-price" class="current-price">₹0.00</span>
+                                        <span id="main-change" class="change-badge neutral">0.00%</span>
+                                    </div>
+                                    <div class="metric-row">
+                                        <div class="metric">
+                                            <span class="label">Session High</span>
+                                            <span id="stat-high" class="value">--</span>
+                                        </div>
+                                        <div class="metric">
+                                            <span class="label">Session Low</span>
+                                            <span id="stat-low" class="value">--</span>
+                                        </div>
+                                        <div class="metric">
+                                            <span class="label">Daily Vol</span>
+                                            <span id="stat-vol" class="value">--</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="card glass trade-panel">
+                            <div class="card-header">
+                                <h3>Trade Execution Core</h3>
+                                <div id="market-locked-msg" class="locked-badge hidden">
+                                    <i class="fa-solid fa-lock"></i> TERMINAL LOCKED
+                                </div>
+                            </div>
+
+                            <div class="trade-interface-v2">
+                                <div class="trade-input-grp">
+                                    <label>ASSET QUANTITY</label>
+                                    <input type="number" id="trade-qty" value="1" min="1">
+                                </div>
+
+                                <div class="tax-grid-detailed">
+                                    <div class="tax-item">
+                                        <span class="tax-label">STT (0.1%)</span>
+                                        <span id="tax-stt" class="tax-value">₹0.00</span>
+                                    </div>
+                                    <div class="tax-item">
+                                        <span class="tax-label">Stamp Levy</span>
+                                        <span id="tax-stamp" class="tax-value">₹0.00</span>
+                                    </div>
+                                    <div class="tax-item">
+                                        <span class="tax-label">Exch Charges</span>
+                                        <span id="tax-exch" class="tax-value">₹0.00</span>
+                                    </div>
+                                    <div class="tax-item">
+                                        <span class="tax-label">GST Compliance</span>
+                                        <span id="tax-gst" class="tax-value">₹0.00</span>
+                                    </div>
+                                </div>
+
+                                <div class="trade-total-bar">
+                                    <span class="total-label">Estimated Exposure</span>
+                                    <span id="trade-total-est" class="total-value">₹0.00</span>
+                                </div>
+
+                                <div class="trade-actions">
+                                    <button id="btn-buy" class="btn-trade buy">EXECUTE BUY</button>
+                                    <button id="btn-sell" class="btn-trade sell">EXECUTE SELL</button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="analysis-right">
+                        <section class="card glass ai-section">
+                            <div class="card-header">
+                                <h3>Strategic Advisor</h3>
+                                <span class="ai-chip">VANGUARD NEURAL</span>
+                            </div>
+
+                            <div class="planner-input-box">
+                                <textarea id="plan-input"
+                                    placeholder="Enter strategic goals or inquiries..."></textarea>
+                                <button id="btn-generate-plan" class="btn-primary">Initialize Strategy Analysis</button>
+                            </div>
+
+                            <div id="plan-output" class="plan-output">
+                                <p class="empty-state">Strategic advisor ready for input...</p>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="vanguard.js"></script>
+</body>
+
+</html>

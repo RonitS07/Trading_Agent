@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading_Future - Next-Gen Indian Trading Terminal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="pro-theme">
+
+    <header class="top-header">
+        <div class="header-content">
+            <div class="brand">
+                <div class="logo-box"
+                    style="background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                <span class="brand-name">TRADING_<span class="accent-text"
+                        style="color: var(--accent-cyan);">FUTURE</span></span>
+            </div>
+
+            <nav class="main-nav">
+                <button class="nav-btn active" data-tab="tab-overview">
+                    <i class="fa-solid fa-house"></i> Overview
+                </button>
+                <button class="nav-btn" data-tab="tab-analysis">
+                    <i class="fa-solid fa-magnifying-glass"></i> Analysis
+                </button>
+                <button class="nav-btn" data-tab="tab-planner">
+                    <i class="fa-solid fa-brain"></i> AI Planner
+                </button>
+            </nav>
+
+            <div class="header-actions">
+                <div id="market-status-badge" class="market-tag">NSE/BSE LIVE</div>
+                <div class="user-avatar">RS</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="portfolio-bar">
+        <div class="stat-card">
+            <span class="stat-label">CASH BALANCE</span>
+            <span id="port-cash" class="stat-value">₹1,00,000</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">INVESTED</span>
+            <span id="port-invested" class="stat-value">₹0</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">TOTAL P&L</span>
+            <span id="port-pnl" class="stat-value">+0 (0.00%)</span>
+        </div>
+        <div class="stat-card dropdown">
+            <span class="stat-label">MARKET INFO <i class="fa-solid fa-circle-info"></i></span>
+            <span id="market-disclaimer" class="stat-value" style="font-size: 0.8rem; color: var(--accent-cyan);">PAPER
+                TRADING ONLY</span>
+            <div class="dropdown-content">
+                <p>NSE/BSE Delivery Simulation</p>
+                <p>Virtual Initial Capital: ₹1L</p>
+                <p>No Real Financial Risk</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar-left">
+            <div class="search-container">
+                <div class="search-input-wrapper">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="omnibar-input" placeholder="Search Stocks..." autocomplete="off">
+                    <div id="search-results" class="search-dropdown hidden"></div>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <div class="sidebar-section">
+                    <div class="section-header">
+                        <span class="section-title">WATCHLIST <i class="fa-solid fa-star"
+                                style="font-size: 0.7rem; vertical-align: middle; margin-left: 4px;"></i></span>
+                    </div>
+                    <div id="watchlist-container" class="watchlist-list"></div>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="section-header">
+                        <span class="section-title">HOLDINGS <i class="fa-solid fa-briefcase"
+                                style="font-size: 0.7rem; vertical-align: middle; margin-left: 4px;"></i></span>
+                    </div>
+                    <div id="holdings-container" class="watchlist-list">
+                        <div class="placeholder-text">No active holdings</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Dynamic Content -->
+        <main id="tab-container" class="content-area">
+
+            <!-- OVERVIEW TAB -->
+            <div id="tab-overview" class="tab-content active">
+                <div class="dashboard-grid">
+                    <div class="card chart-card">
+                        <div class="card-header">
+                            <h3>Portfolio Growth</h3>
+                        </div>
+                        <div class="mock-chart">
+                            <div class="chart-header-stats">
+                                <span class="chart-legend">PORTFOLIO YIELD (1D)</span>
+                                <span id="chart-total-val" class="main-val-text">₹1,00,000</span>
+                            </div>
+                            <div id="chart-container" class="chart-draw-area">
+                                <svg id="portfolio-svg" viewBox="0 0 400 150" preserveAspectRatio="none">
+                                    <defs>
+                                        <linearGradient id="chart-grad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stop-color="var(--accent-cyan)" stop-opacity="0.3" />
+                                            <stop offset="100%" stop-color="var(--accent-cyan)" stop-opacity="0" />
+                                        </linearGradient>
+                                    </defs>
+                                    <path id="chart-path-area" d="" fill="url(#chart-grad)" />
+                                    <path id="chart-path-line" d="" fill="none" stroke="var(--accent-cyan)"
+                                        stroke-width="2.5" stroke-linecap="round" />
+                                </svg>
+                            </div>
+                            <div id="portfolio-chart-labels" class="chart-time-labels">
+                                <span>--:--</span>
+                                <span>--:--</span>
+                                <span>--:--</span>
+                                <span>--:--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card intelligence-card">
+                        <div class="card-header">
+                            <h3>AI Market Intelligence</h3>
+                            <i class="fa-solid fa-robot"></i>
+                        </div>
+                        <div id="market-ai-advice" class="ai-box">
+                            <p class="blink">Market Sentiment: CAUTIOUS</p>
+                            <p style="margin-top: 15px; opacity: 0.8;">Select a stock for a deep-dive execution
+                                strategy.</p>
+                        </div>
+                    </div>
+
+                    <div class="card activity-card">
+                        <div class="card-header">
+                            <h3>Recent Activity</h3>
+                            <i class="fa-solid fa-history"></i>
+                        </div>
+                        <div id="activity-log" class="log-container">
+                            <div class="placeholder-text">No active activity</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANALYSIS TAB -->
+            <div id="tab-analysis" class="tab-content">
+                <div class="analysis-view">
+                    <div class="analysis-left">
+                        <section class="card profile-card">
+                            <div class="profile-header">
+                                <div class="symbol-info">
+                                    <h1 id="main-symbol">--</h1>
+                                    <span id="main-name" class="sub-text">Sovereign Equity Asset</span>
+                                </div>
+                                <div id="live-status" class="live-badge hidden">
+                                    <span class="live-dot"></span> LIVE FEED
+                                </div>
+                            </div>
+
+                            <div class="profile-body">
+                                <div class="price-hero">
+                                    <span id="main-price" class="main-price">₹0.00</span>
+                                    <span id="main-change" class="change-tag">0.00%</span>
+                                </div>
+                                <div class="stats-grid">
+                                    <div class="stat-box">
+                                        <span class="label">DAY HIGH</span>
+                                        <span id="stat-high" class="value">--</span>
+                                    </div>
+                                    <div class="stat-box">
+                                        <span class="label">DAY LOW</span>
+                                        <span id="stat-low" class="value">--</span>
+                                    </div>
+                                    <div class="stat-box">
+                                        <span class="label">VOLUME</span>
+                                        <span id="stat-vol" class="value">--</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="stock-chart-section" class="chart-section">
+                                <div class="chart-controls">
+                                    <button class="chart-rng active" data-rng="1d">1D</button>
+                                    <button class="chart-rng" data-rng="5d">5D</button>
+                                    <button class="chart-rng" data-rng="1mo">1M</button>
+                                    <button class="chart-rng" data-rng="1y">1Y</button>
+                                </div>
+                                <div id="stock-chart-container" class="stock-chart-box">
+                                    <div id="chart-tooltip" class="chart-tooltip hidden">
+                                        <div id="tooltip-price">--</div>
+                                        <div id="tooltip-time">--</div>
+                                    </div>
+                                    <div id="chart-crosshair" class="chart-crosshair hidden"></div>
+                                    <svg id="stock-svg" viewBox="0 0 600 200" preserveAspectRatio="none">
+                                        <path id="stock-path-line" d="" fill="none" stroke="var(--accent-cyan)"
+                                            stroke-width="2" />
+                                    </svg>
+                                    <div id="stock-chart-labels" class="chart-labels">
+                                        <span>--</span>
+                                        <span>--</span>
+                                        <span>--</span>
+                                    </div>
+                                    <div id="chart-loading" class="chart-overlay hidden">Loading Chart...</div>
+                                </div>
+                                <div class="intent-bar">
+                                    <button id="btn-intent-buy" class="btn-buy-primary">BUY EQUITY</button>
+                                    <button id="btn-intent-sell" class="btn-sell-primary">SELL EQUITY</button>
+                                    <div id="market-locked-msg" class="market-status-locked hidden">
+                                        <i class="fa-solid fa-lock"></i> MARKET CLOSED
+                                    </div>
+                                </div>
+
+                                <!-- NEW: Market Sentiment Section -->
+                                <div class="sentiment-section">
+                                    <div class="sentiment-header">
+                                        <span class="s-title">LIVE MARKET SENTIMENT</span>
+                                        <span id="sentiment-label" class="s-label bullish">BULLISH</span>
+                                    </div>
+                                    <div class="sentiment-meter-wrapper">
+                                        <div class="sentiment-bar-bg">
+                                            <div id="sentiment-fill-bar" class="sentiment-fill" style="width: 65%;">
+                                            </div>
+                                        </div>
+                                        <div class="sentiment-stats">
+                                            <span id="bull-pct">65% Bullish</span>
+                                            <span id="bear-pct">35% Bearish</span>
+                                        </div>
+                                    </div>
+                                    <p class="sentiment-desc">Real-time analysis based on price action and volatility
+                                        momentum.</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section id="planner-card" class="card planner-card transaction-sheet hidden">
+                            <div class="card-header">
+                                <h3 id="planner-title">Simulated Trade Planner</h3>
+                                <button id="btn-close-planner" class="btn-icon-close"><i
+                                        class="fa-solid fa-xmark"></i></button>
+                            </div>
+
+                            <div class="trade-form">
+                                <div class="input-row">
+                                    <label>ORDER QUANTITY</label>
+                                    <input type="number" id="trade-qty" value="100" min="1">
+                                    <div class="order-val-group">
+                                        <span class="val-label">Order Value</span>
+                                        <span id="trade-order-value" class="val-amount">₹0</span>
+                                    </div>
+                                </div>
+
+                                <div class="tax-breakdown">
+                                    <div class="tax-row">
+                                        <span class="t-label">STT (0.1%)</span>
+                                        <span id="tax-stt" class="t-value">₹0.00</span>
+                                        <span class="t-label">Stamp Duty</span>
+                                        <span id="tax-stamp" class="t-value">₹0.00</span>
+                                    </div>
+                                    <div class="tax-row">
+                                        <span class="t-label">Exch. Charges</span>
+                                        <span id="tax-exch" class="t-value">₹0.00</span>
+                                        <span class="t-label">GST (18%)</span>
+                                        <span id="tax-gst" class="t-value">₹0.00</span>
+                                    </div>
+                                </div>
+
+                                <div class="total-estimated-box">
+                                    <span class="total-label">Total Estimated Cost</span>
+                                    <span id="trade-total-est" class="total-value">₹0.00</span>
+                                </div>
+
+                                <div class="action-buttons">
+                                    <button id="btn-buy" class="btn-buy">SIMULATE BUY</button>
+                                    <button id="btn-sell" class="btn-sell">SIMULATE SELL</button>
+                                </div>
+                                <p class="trade-footer">Execution restricted to market hours - NSE/BSE Delivery only</p>
+                            </div>
+                        </section>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="tab-planner" class="tab-content">
+                <div class="planner-layout">
+                    <section class="card ai-planner-card full-height">
+                        <div class="card-header">
+                            <h3>AI Strategic Planner</h3>
+                            <div class="engine-chip">GPT-4 ENGINE</div>
+                        </div>
+
+                        <div class="planner-body chat-mode">
+                            <div id="chat-history" class="chat-container">
+                                <div class="chat-msg ai">Hello! I'm your AI Strategic Planner. Select a stock in
+                                    Analysis and ask me for a strategy here.</div>
+                            </div>
+                            <div class="chat-input-wrapper">
+                                <textarea id="plan-input"
+                                    placeholder="Ask about strategy, risk, or targets..."></textarea>
+                                <button id="btn-generate-plan" class="btn-send"><i
+                                        class="fa-solid fa-paper-plane"></i></button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+    </div>
+
+    </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- Security Modal -->
+    <div id="security-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3><i class="fa-solid fa-shield-halved"></i> Security Verification</h3>
+            <p>Enter your 4-digit PIN to authorize this transaction.</p>
+            <div class="pin-input-group">
+                <input type="password" id="security-pin" placeholder="••••" maxlength="4">
+            </div>
+            <div class="modal-actions">
+                <button id="btn-security-cancel" class="btn-cancel">Cancel</button>
+                <button id="btn-security-confirm" class="btn-confirm">Confirm Trade</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=3"></script>
+</body>
+
+</html>
