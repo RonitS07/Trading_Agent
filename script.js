@@ -1,5 +1,5 @@
 /**
- * TRADING_FUTURE - NEXT-GEN INDIAN TRADING TERMINAL
+ * TRADEPILOT - NEXT-GEN INDIAN TRADING TERMINAL
  * High-fidelity trading logic with Indian taxation and AI Strategic Planning.
  */
 
@@ -336,7 +336,6 @@ const UI = {
         statVol: document.getElementById('stat-vol'),
 
         // Trade Els
-        marketLocked: document.getElementById('market-locked-msg'),
         tradeQty: document.getElementById('trade-qty'),
         orderVal: document.getElementById('trade-order-value'),
         taxStt: document.getElementById('tax-stt'),
@@ -552,7 +551,6 @@ const UI = {
         const market = this.getMarketStatus();
         this.els.marketBadge.className = `market-tag ${market.isOpen ? '' : 'closed'}`;
         this.els.marketBadge.innerText = market.statusText;
-        this.els.marketLocked.classList.toggle('hidden', market.isOpen);
         this.els.btnBuy.disabled = !market.isOpen;
         this.els.btnSell.disabled = !market.isOpen;
     },

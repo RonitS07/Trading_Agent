@@ -1,6 +1,6 @@
-# Free Deployment Guide for Trading_Future
+# Free Deployment Guide for TradePilot
 
-This guide provides step-by-step instructions for deploying your Trading_Future application for free using popular hosting platforms.
+This guide provides step-by-step instructions for deploying your TradePilot application for free using popular hosting platforms.
 
 ## Prerequisites
 
@@ -185,4 +185,4 @@ After deploying, test the following:
 
 ---
 
-**Congratulations!** Your Trading_Future app is now live and accessible to the world. 🚀
+**Congratulations!** Your TradePilot app is now live and accessible to the world. 🚀
