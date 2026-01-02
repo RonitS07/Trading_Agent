@@ -1490,11 +1490,22 @@ body {
         cursor: pointer;
     }
 
+    /* Fix Header Overlap */
+    .main-header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        backdrop-filter: blur(15px);
+        background: rgba(10, 10, 12, 0.9);
+        padding: 10px 15px;
+        /* Compact mobile header */
+    }
+
     .sidebar-left {
         position: fixed;
         left: 0;
         top: 60px;
-        /* Below header */
+        /* Matches header height approx */
         bottom: 0;
         width: 85%;
         max-width: 300px;
@@ -1531,9 +1542,11 @@ body {
     }
 
     .content-area {
-        padding: 10px;
         width: 100%;
         overflow-x: hidden;
+        padding: 15px;
+        padding-bottom: 100px;
+        /* Prevent bottom content from being cut off */
     }
 
     .portfolio-bar {
@@ -1558,9 +1571,8 @@ body {
     /* Bigger tap targets */
     .nav-btn {
         padding: 12px 15px;
-        font-size: 0.9rem;
-        flex: 1;
-        justify-content: center;
+        padding: 12px 18px;
+        font-size: 1rem;
     }
 
     .main-nav {
@@ -1570,15 +1582,18 @@ body {
 
     .header-content {
         flex-direction: column;
-        gap: 10px;
-        padding: 10px 0;
-        height: auto;
-        /* Allow growth */
+        align-items: flex-start;
+        position: relative;
+        z-index: 10;
     }
 
     .top-header {
-        height: auto;
-        padding: 10px;
+        width: 100%;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        position: relative;
+        z-index: 20;
+        /* Ensure header buttons are clickable */
     }
 
     .brand {
@@ -1590,7 +1605,7 @@ body {
         /* Simplify header */
     }
 
-    /* Analysis View Mobile */
+    /* Analysis View Mobile Tweak */
     .profile-header {
         flex-direction: column;
         gap: 10px;
@@ -1606,12 +1621,13 @@ body {
     }
 
     #main-price {
-        font-size: 2.2rem;
+        font-size: 2.5rem;
     }
 
+    /* Chart Container Height */
     .stock-chart-box {
-        height: 250px;
-        /* Smaller chart height */
+        height: 300px;
+        margin-bottom: 20px;
     }
 
     svg {
@@ -1620,17 +1636,17 @@ body {
 
     .chart-controls {
         overflow-x: auto;
-        white-space: nowrap;
+        justify-content: flex-start;
         padding-bottom: 5px;
     }
 
     .chart-rng {
-        padding: 8px 16px;
-        /* Bigger target */
+        flex-shrink: 0;
     }
 
     .intent-bar {
         flex-direction: column;
+        gap: 10px;
     }
 
     .btn-buy-primary,
@@ -1647,10 +1663,12 @@ body {
         right: 0;
         top: auto;
         margin: 0;
-        border-radius: 16px 16px 0 0;
+        border-radius: 20px 20px 0 0;
         transform: translateY(100%);
-        transition: transform 0.3s ease;
-        z-index: 1000;
+        transition: transform 0.3s cubic-bezier(0.1, 0.7, 0.1, 1);
+        z-index: 3000;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8);
+        max-width: 100%;
         max-height: 80vh;
         overflow-y: auto;
     }
