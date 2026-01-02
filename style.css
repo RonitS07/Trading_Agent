@@ -1462,218 +1462,403 @@ body {
 }
 
 /* --- MOBILE RESPONSIVE --- */
-@media (min-width: 769px) {
-    .hidden-d {
-        display: none !important;
-    }
+/* --- MOBILE REDESIGN 2026 --- */
+
+/* Default: Desktop Mode (Mobile Hidden) */
+.mobile-only {
+    display: none !important;
 }
 
+/* Mobile Mode */
 @media (max-width: 768px) {
+
+    /* Hide Desktop Elements */
+    .desktop-only,
+    .hidden-m {
+        display: none !important;
+    }
+
+    /* Show Mobile Elements */
+    .mobile-only {
+        display: flex !important;
+    }
+
+    /* Block level overrides */
+    header.mobile-header {
+        display: flex !important;
+    }
+
+    main.mobile-content {
+        display: block !important;
+    }
+
+    /* Layout Structure */
     body {
-        height: auto;
-        overflow-y: auto;
-    }
-
-    .main-layout {
-        position: relative;
-        /* For absolute sidebar */
-        flex-direction: column;
-    }
-
-    .mobile-menu-btn {
-        background: transparent;
-        border: 1px solid var(--border-color);
-        color: var(--text-primary);
-        padding: 8px 12px;
-        border-radius: 6px;
-        margin-right: 10px;
-        cursor: pointer;
-    }
-
-    /* Fix Header Overlap */
-    .main-header {
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        backdrop-filter: blur(15px);
-        background: rgba(10, 10, 12, 0.9);
-        padding: 10px 15px;
-        /* Compact mobile header */
-    }
-
-    .sidebar-left {
-        position: fixed;
-        left: 0;
-        top: 60px;
-        /* Matches header height approx */
-        bottom: 0;
-        width: 85%;
-        max-width: 300px;
+        overflow: hidden;
+        /* App-like feel */
         background-color: var(--bg-dark);
-        z-index: 2000;
-        transform: translateX(-100%);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border-right: 1px solid var(--border-color);
-        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
     }
 
-    .sidebar-left.open {
-        transform: translateX(0);
-    }
-
-    /* Overlay when menu is open */
-    .sidebar-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(4px);
-        z-index: 1500;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s;
-    }
-
-    .sidebar-overlay.active {
-        opacity: 1;
-        pointer-events: auto;
-    }
-
-    .content-area {
-        width: 100%;
-        overflow-x: hidden;
-        padding: 15px;
-        padding-bottom: 100px;
-        /* Prevent bottom content from being cut off */
-    }
-
-    .portfolio-bar {
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        padding: 10px;
-    }
-
-    .stat-card.dropdown {
-        display: none;
-        /* Hide Market Info on mobile to save space */
-    }
-
-    .dashboard-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .chart-card {
-        grid-column: span 1;
-    }
-
-    /* Bigger tap targets */
-    .nav-btn {
-        padding: 12px 15px;
-        padding: 12px 18px;
-        font-size: 1rem;
-    }
-
-    .main-nav {
-        width: 100%;
-        overflow-x: auto;
-    }
-
-    .header-content {
+    .mobile-layout {
+        position: absolute;
+        inset: 0;
+        display: flex !important;
         flex-direction: column;
-        align-items: flex-start;
-        position: relative;
-        z-index: 10;
+        background: var(--bg-dark);
+        z-index: 9999;
+        /* Overlay everything */
     }
 
-    .top-header {
-        width: 100%;
+    /* 1. Mobile Header */
+    .mobile-header {
+        height: 50px;
+        flex-shrink: 0;
+        display: flex;
         justify-content: space-between;
-        margin-bottom: 10px;
-        position: relative;
-        z-index: 20;
-        /* Ensure header buttons are clickable */
+        align-items: center;
+        padding: 0 20px;
+        background: rgba(5, 7, 10, 0.9);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border-color);
+        z-index: 100;
     }
 
-    .brand {
+    .m-brand {
+        font-weight: 800;
+        font-size: 1.1rem;
+        letter-spacing: 1px;
+    }
+
+    .m-market-badge {
+        font-size: 0.7rem;
+        background: rgba(0, 255, 136, 0.1);
+        color: var(--accent-green);
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 255, 136, 0.3);
+        font-weight: 700;
+        box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+    }
+
+    /* 2. Content Area */
+    .mobile-content {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-bottom: 80px;
+        /* Space for bottom nav */
+        position: relative;
+    }
+
+    .m-view {
+        display: none;
+        padding: 20px;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .m-view.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* M-Overview Styles */
+    .m-portfolio-card {
+        background: linear-gradient(145deg, rgba(20, 25, 35, 0.8), rgba(10, 12, 18, 0.9));
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .m-port-label {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        font-weight: 700;
+        letter-spacing: 1px;
         margin-bottom: 5px;
     }
 
-    .header-actions {
-        display: none;
-        /* Simplify header */
+    .m-port-val {
+        font-family: var(--font-data);
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 10px;
     }
 
-    /* Analysis View Mobile Tweak */
-    .profile-header {
-        flex-direction: column;
-        gap: 10px;
+    .m-port-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
 
-    .header-right-group {
+    .m-pnl-tag {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 5px 10px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 700;
+    }
+
+    .m-port-growth {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    .m-search-box {
+        position: relative;
+        margin-bottom: 25px;
+    }
+
+    .m-search-box i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-secondary);
+    }
+
+    #m-search-input {
         width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        padding: 14px 14px 14px 45px;
+        border-radius: 12px;
+        color: #fff;
+        font-size: 1rem;
+        font-family: var(--font-heading);
+    }
+
+    #m-search-input:focus {
+        background: rgba(0, 0, 0, 0.8);
+        border-color: var(--accent-cyan);
+        outline: none;
+    }
+
+    .m-section-title {
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: var(--text-secondary);
+        margin-bottom: 15px;
+        letter-spacing: 0.5px;
+        padding-left: 5px;
+    }
+
+    .m-watchlist-scroll {
+        display: flex;
+        overflow-x: auto;
+        gap: 15px;
+        padding-bottom: 15px;
+        /* Scrollbar space */
+        margin-bottom: 20px;
+        scroll-snap-type: x mandatory;
+    }
+
+    .m-watchlist-scroll::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .m-chip-card {
+        min-width: 140px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 15px;
+        scroll-snap-align: start;
+        display: flex;
+        flex-direction: column;
         justify-content: space-between;
     }
 
-    .price-hero {
-        flex-wrap: wrap;
+    .m-chip-sym {
+        font-weight: 700;
+        font-size: 0.9rem;
+        margin-bottom: 5px;
     }
 
-    #main-price {
-        font-size: 2.5rem;
+    .m-chip-price {
+        font-family: var(--font-data);
+        font-size: 1.1rem;
+        font-weight: 700;
     }
 
-    /* Chart Container Height */
-    .stock-chart-box {
-        height: 300px;
+    .m-chip-chg {
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-top: 5px;
+    }
+
+    /* M-Analysis Styles */
+    .m-stock-card {
         margin-bottom: 20px;
     }
 
-    svg {
-        overflow: visible;
+    .m-stock-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
     }
 
-    .chart-controls {
-        overflow-x: auto;
-        justify-content: flex-start;
-        padding-bottom: 5px;
+    #m-symbol {
+        font-size: 2rem;
+        font-family: var(--font-heading);
+        font-weight: 800;
     }
 
-    .chart-rng {
-        flex-shrink: 0;
+    .m-btn-icon {
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: #fff;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        font-size: 1.2rem;
     }
 
-    .intent-bar {
-        flex-direction: column;
-        gap: 10px;
+    .m-btn-icon.active {
+        color: var(--accent-cyan);
+        text-shadow: 0 0 10px var(--accent-cyan);
     }
 
-    .btn-buy-primary,
-    .btn-sell-primary {
+    .m-price-row {
+        display: flex;
+        align-items: baseline;
+        gap: 15px;
+    }
+
+    #m-price {
+        font-family: var(--font-data);
+        font-size: 2.8rem;
+        font-weight: 700;
+    }
+
+    .m-chart-container {
+        height: 250px;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 16px;
+        margin-bottom: 25px;
+        padding: 10px 0;
+        position: relative;
+    }
+
+    #m-stock-svg {
         width: 100%;
-        padding: 16px;
+        height: 100%;
     }
 
-    /* Planner */
-    .planner-card.transaction-sheet {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        top: auto;
-        margin: 0;
-        border-radius: 20px 20px 0 0;
-        transform: translateY(100%);
-        transition: transform 0.3s cubic-bezier(0.1, 0.7, 0.1, 1);
-        z-index: 3000;
-        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8);
-        max-width: 100%;
-        max-height: 80vh;
-        overflow-y: auto;
+    .m-action-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
     }
 
-    .planner-card.transaction-sheet:not(.hidden) {
-        transform: translateY(0);
+    .m-action-btn {
+        padding: 18px;
+        border: none;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 1.1rem;
+        color: #000;
+    }
+
+    .m-action-btn.buy {
+        background: var(--accent-green);
+        box-shadow: 0 0 20px rgba(191, 255, 0, 0.3);
+    }
+
+    .m-action-btn.sell {
+        background: var(--accent-red);
+        box-shadow: 0 0 20px rgba(255, 0, 85, 0.3);
+    }
+
+    /* M-Planner */
+    .m-ai-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 20px;
+        min-height: 200px;
+        margin-bottom: 20px;
+    }
+
+    .m-ai-header {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: var(--accent-magenta);
+        margin-bottom: 15px;
+        letter-spacing: 1px;
+    }
+
+    .m-ai-body {
+        font-size: 1rem;
+        line-height: 1.5;
+        color: #eee;
+    }
+
+    .m-full-btn {
+        width: 100%;
+        padding: 18px;
+        background: var(--accent-cyan);
+        color: #000;
+        border: none;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 1rem;
+    }
+
+    /* 3. Bottom Nav */
+    .mobile-bottom-nav {
+        height: 65px;
+        flex-shrink: 0;
+        background: rgba(5, 7, 10, 0.95);
+        backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding-bottom: 5px;
+        /* iPhone home indicator spacing */
+        z-index: 1000;
+    }
+
+    .m-nav-item {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.75rem;
+        width: 60px;
+        padding: 5px 0;
+    }
+
+    .m-nav-item i {
+        font-size: 1.2rem;
+        margin-bottom: 2px;
+        transition: transform 0.2s;
+    }
+
+    .m-nav-item.active {
+        color: var(--accent-cyan);
+    }
+
+    .m-nav-item.active i {
+        transform: translateY(-2px);
+        filter: drop-shadow(0 0 8px var(--accent-cyan));
     }
 }

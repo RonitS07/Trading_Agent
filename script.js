@@ -88,17 +88,39 @@ class MockDataEngine {
         { symbol: "PIDILITIND.NS", name: "Pidilite Industries", price: 2600.00 },
         { symbol: "SIEMENS.NS", name: "Siemens Ltd", price: 3600.00 },
         { symbol: "INDIGO.NS", name: "InterGlobe Aviation", price: 2500.00 },
-        { symbol: "EICHERMOT.NS", name: "Eicher Motors Ltd", price: 3500.00 }
+        { symbol: "EICHERMOT.NS", name: "Eicher Motors Ltd", price: 3500.00 },
+        { symbol: "IZMO.NS", name: "Izmo Ltd", price: 816.00 }
     ];
+
+    static generateMockStock(symbol) {
+        // Deterministic price generation based on symbol hash
+        let hash = 0;
+        for (let i = 0; i < symbol.length; i++) hash = symbol.charCodeAt(i) + ((hash << 5) - hash);
+        const basePrice = Math.abs(hash % 2000) + 500; // Price between 500 and 2500
+
+        return {
+            symbol: symbol.toUpperCase(),
+            name: `${symbol.toUpperCase().split('.')[0]} (Simulated)`,
+            price: basePrice
+        };
+    }
 
     static async search(query) {
         if (!query) return [];
         const q = query.toLowerCase();
         return new Promise(resolve => {
             setTimeout(() => {
-                const results = this.STOCKS.filter(s =>
+                let results = this.STOCKS.filter(s =>
                     s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q)
                 ).map(s => ({ symbol: s.symbol, shortname: s.name }));
+
+                // Universal Fallback: If query looks like a symbol and few results, add it
+                if (results.length < 3 && q.length > 2) {
+                    const potentialSym = q.toUpperCase() + (q.includes('.') ? '' : '.NS');
+                    if (!results.find(r => r.symbol === potentialSym)) {
+                        results.push({ symbol: potentialSym, shortname: "Search Result" });
+                    }
+                }
                 resolve(results);
             }, 200);
         });
@@ -106,7 +128,7 @@ class MockDataEngine {
 
     static async getQuote(symbol) {
         return new Promise(resolve => {
-            const stock = this.STOCKS.find(s => s.symbol === symbol) || { symbol, name: symbol, price: 1000 };
+            const stock = this.STOCKS.find(s => s.symbol === symbol) || this.generateMockStock(symbol);
 
             // Generate pseudo-random live data
             const volatility = 0.015; // 1.5% daily volatility
@@ -138,7 +160,8 @@ class MockDataEngine {
             if (range === '1mo') { points = 30; interval = 86400; }
             if (range === '1y') { points = 52; interval = 604800; }
 
-            const basePrice = (this.STOCKS.find(s => s.symbol === symbol)?.price) || 1000;
+            // Use known stock or generate mock base
+            const basePrice = (this.STOCKS.find(s => s.symbol === symbol)?.price) || this.generateMockStock(symbol).price;
             let price = basePrice;
 
             for (let i = points; i >= 0; i--) {
@@ -517,7 +540,25 @@ const UI = {
 
         // Mobile Menu
         mobileMenuBtn: document.getElementById('mobile-menu-btn'),
-        sidebar: document.querySelector('.sidebar-left')
+        sidebar: document.querySelector('.sidebar-left'),
+
+        // --- MOBILE REDESIGN ELEMENTS ---
+        mobileNavItems: document.querySelectorAll('.m-nav-item'),
+        mobileViews: document.querySelectorAll('.m-view'),
+        mSearchInput: document.getElementById('m-search-input'),
+        mWatchlistChips: document.getElementById('m-watchlist-chips'),
+        mSymbol: document.getElementById('m-symbol'),
+        mPrice: document.getElementById('m-price'),
+        mChange: document.getElementById('m-change'),
+        mStockPath: document.getElementById('m-stock-path'),
+        mBtnStar: document.getElementById('m-btn-star'),
+        mBtnBuy: document.getElementById('m-btn-buy'),
+        mBtnSell: document.getElementById('m-btn-sell'),
+        mPortTotal: document.getElementById('m-port-total'),
+        mPortPnl: document.getElementById('m-port-pnl'),
+        mPortInvested: document.getElementById('m-port-invested'),
+        mAiResponse: document.getElementById('m-ai-response'),
+        mBtnPlan: document.getElementById('m-btn-plan')
     },
 
     pendingTrade: null,
@@ -525,7 +566,13 @@ const UI = {
     init() {
         Ticker.start();
         this.createMobileOverlay();
+        this.createMobileOverlay();
         this.bindEvents();
+        this.bindMobileEvents();
+        this.updateMarketStatus();
+        this.renderPortfolio();
+        this.renderWatchlist();
+        this.renderMobileWatchlistChips();
         this.updateMarketStatus();
         this.renderPortfolio();
         this.renderWatchlist();
@@ -621,6 +668,90 @@ const UI = {
                 this.els.sidebarOverlay.classList.remove('active');
             };
         }
+        if (this.els.sidebarOverlay) {
+            this.els.sidebarOverlay.onclick = () => {
+                this.els.sidebar.classList.remove('open');
+                this.els.sidebarOverlay.classList.remove('active');
+            };
+        }
+    },
+
+    bindMobileEvents() {
+        // Mobile Tab Switching
+        this.els.mobileNavItems.forEach(btn => {
+            btn.onclick = () => this.switchMobileTab(btn.dataset.target);
+        });
+
+        // Mobile Search
+        if (this.els.mSearchInput) {
+            let debounce;
+            this.els.mSearchInput.addEventListener('input', (e) => {
+                clearTimeout(debounce);
+                debounce = setTimeout(() => this.handleSearch(e.target.value), 300);
+            });
+        }
+
+        // Mobile Watchlist Star
+        if (this.els.mBtnStar) {
+            this.els.mBtnStar.onclick = () => this.toggleWatchlist();
+        }
+
+        // Mobile Actions
+        if (this.els.mBtnBuy) this.els.mBtnBuy.onclick = () => this.openTradePlanner('BUY');
+        if (this.els.mBtnSell) this.els.mBtnSell.onclick = () => this.openTradePlanner('SELL');
+
+        // Mobile Plan
+        if (this.els.mBtnPlan) {
+            this.els.mBtnPlan.onclick = () => {
+                this.els.mAiResponse.innerHTML = `<p class="blink">Generating Strategy...</p>`;
+                setTimeout(() => {
+                    const advice = ActionPlanner.generateMarketAdvice(); // Simplified for mobile button
+                    this.els.mAiResponse.innerHTML = advice;
+                }, 1000);
+            };
+        }
+    },
+
+    switchMobileTab(targetId) {
+        this.els.mobileNavItems.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.target === targetId);
+        });
+        this.els.mobileViews.forEach(view => {
+            view.classList.remove('active');
+            if (view.id === targetId) {
+                view.classList.add('active');
+            }
+        });
+    },
+
+    renderMobileWatchlistChips() {
+        if (!this.els.mWatchlistChips) return;
+        this.els.mWatchlistChips.innerHTML = '';
+
+        if (STATE.watchlist.length === 0) {
+            this.els.mWatchlistChips.innerHTML = '<div class="m-chip-placeholder" style="color:#666; font-size:0.8rem; padding:10px;">Search stocks to build your list</div>';
+            return;
+        }
+
+        STATE.watchlist.forEach(sym => {
+            const stock = STATE.stockData.get(sym);
+            const price = stock ? stock.displayPrice : 0;
+            const change = stock ? stock.changePct : 0;
+            const isPos = change >= 0;
+
+            const div = document.createElement('div');
+            div.className = 'm-chip-card';
+            div.innerHTML = `
+                <div class="m-chip-sym">${sym}</div>
+                <div class="m-chip-price">₹${price.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                <div class="m-chip-chg ${isPos ? 'text-green' : 'text-red'}">${isPos ? '+' : ''}${change.toFixed(2)}%</div>
+            `;
+            div.onclick = () => {
+                this.loadStock(sym);
+                this.switchMobileTab('m-analysis');
+            };
+            this.els.mWatchlistChips.appendChild(div);
+        });
     },
 
     isMarketOpen() {
@@ -827,6 +958,29 @@ const UI = {
 
         // Render Date Labels
         this.renderDateLabels(data);
+
+        // --- MOBILE CHART RENDER ---
+        if (this.els.mStockPath) {
+            const mPath = this.els.mStockPath;
+            const mWidth = 350; // Keep in sync with viewBox
+            const mHeight = 150;
+            const mPadding = 10;
+
+            const mPoints = data.map((d, i) => {
+                const x = (i / (data.length - 1)) * (mWidth - mPadding * 2) + mPadding;
+                const y = mHeight - ((d.price - minVal) / valRange) * (mHeight - mPadding * 2) - mPadding;
+                return { x, y };
+            });
+
+            let mD = `M ${mPoints[0].x} ${mPoints[0].y}`;
+            for (let i = 1; i < mPoints.length; i++) {
+                const prev = mPoints[i - 1];
+                const curr = mPoints[i];
+                const cx = (prev.x + curr.x) / 2;
+                mD += ` C ${cx} ${prev.y}, ${cx} ${curr.y}, ${curr.x} ${curr.y}`;
+            }
+            mPath.setAttribute('d', mD);
+        }
     },
 
     renderDateLabels(data) {
@@ -979,261 +1133,291 @@ const UI = {
                 setTimeout(() => this.els.mainPrice.classList.remove('text-green', 'text-red'), 500);
             }
         }
-        if (shouldRenderWatchlist) this.renderWatchlist();
-    },
+    }
+        if(shouldRenderWatchlist) {
+        this.renderWatchlist();
+        this.renderMobileWatchlistChips();
+    }
 
-    updateTradePreview() {
+        // Update Mobile Analysis View
+        if(STATE.currentStock?.symbol === symbol) {
         const stock = STATE.currentStock;
-        if (!stock) return;
-        const qty = parseInt(this.els.tradeQty.value) || 0;
-        const price = STATE.stockData.get(stock.symbol)?.displayPrice || stock.price || 0;
-        const net = price * qty;
+const price = parseFloat(stock.displayPrice || stock.price) || 0;
+const change = parseFloat(stock.changePct) || 0;
 
-        const taxes = TaxEngine.calculate(STATE.pendingTradeAction || 'BUY', price, qty);
+if (this.els.mSymbol) this.els.mSymbol.innerText = symbol;
+if (this.els.mPrice) this.els.mPrice.innerText = `₹${price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+if (this.els.mChange) {
+    this.els.mChange.innerText = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+    this.els.mChange.className = `change-tag ${change >= 0 ? 'up' : 'down'}`;
+}
+if (this.els.mBtnStar) {
+    const inList = STATE.watchlist.includes(symbol);
+    this.els.mBtnStar.classList.toggle('active', inList);
+}
+        }
 
-        this.els.orderVal.innerText = `₹${net.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        this.els.taxStt.innerText = `₹${taxes.stt.toFixed(2)}`;
-        this.els.taxStamp.innerText = `₹${taxes.stampDuty.toFixed(2)}`;
-        this.els.taxExch.innerText = `₹${taxes.other.toFixed(2)}`;
-        this.els.taxGst.innerText = `₹${taxes.gst.toFixed(2)}`;
-        this.els.tradeTotalEst.innerText = `₹${(net + taxes.total).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    },
+updateTradePreview() {
+    const stock = STATE.currentStock;
+    if (!stock) return;
+    const qty = parseInt(this.els.tradeQty.value) || 0;
+    const price = STATE.stockData.get(stock.symbol)?.displayPrice || stock.price || 0;
+    const net = price * qty;
 
-    handleTransaction(action) {
-        if (!this.isMarketOpen()) {
-            this.showToast("Cannot trade while market is closed.", "error");
+    const taxes = TaxEngine.calculate(STATE.pendingTradeAction || 'BUY', price, qty);
+
+    this.els.orderVal.innerText = `₹${net.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    this.els.taxStt.innerText = `₹${taxes.stt.toFixed(2)}`;
+    this.els.taxStamp.innerText = `₹${taxes.stampDuty.toFixed(2)}`;
+    this.els.taxExch.innerText = `₹${taxes.other.toFixed(2)}`;
+    this.els.taxGst.innerText = `₹${taxes.gst.toFixed(2)}`;
+    this.els.tradeTotalEst.innerText = `₹${(net + taxes.total).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+},
+
+handleTransaction(action) {
+    if (!this.isMarketOpen()) {
+        this.showToast("Cannot trade while market is closed.", "error");
+        return;
+    }
+
+    // Pressure Handling: Quick trade detection (Revenge Trading check)
+    const lastTrade = STATE.trades[STATE.trades.length - 1];
+    if (lastTrade && (Date.now() - new Date(lastTrade.rawTime).getTime() < 30000)) {
+        this.showToast("AI Warning: Rapid trading detected. Take a breath and review your strategy.", "error");
+        // We don't block the trade, but we warn the user.
+    }
+
+    const stock = STATE.currentStock;
+    const qty = parseInt(this.els.tradeQty.value);
+    if (isNaN(qty) || qty <= 0) return;
+
+    const price = STATE.stockData.get(stock.symbol)?.displayPrice || stock.price;
+    const net = price * qty;
+    const taxes = TaxEngine.calculate(action, price, qty).total;
+    const totalCost = action === 'BUY' ? net + taxes : net - taxes;
+
+    if (action === 'BUY') {
+        if (STATE.balance < totalCost) {
+            this.showToast("Insufficient Balance!", "error");
             return;
         }
-
-        // Pressure Handling: Quick trade detection (Revenge Trading check)
-        const lastTrade = STATE.trades[STATE.trades.length - 1];
-        if (lastTrade && (Date.now() - new Date(lastTrade.rawTime).getTime() < 30000)) {
-            this.showToast("AI Warning: Rapid trading detected. Take a breath and review your strategy.", "error");
-            // We don't block the trade, but we warn the user.
+        STATE.balance -= totalCost;
+        if (!STATE.portfolio[stock.symbol]) STATE.portfolio[stock.symbol] = { qty: 0, avgCost: 0 };
+        const p = STATE.portfolio[stock.symbol];
+        p.avgCost = (p.qty * p.avgCost + net) / (p.qty + qty);
+        p.qty += qty;
+    } else {
+        const p = STATE.portfolio[stock.symbol];
+        if (!p || p.qty < qty) {
+            this.showToast("Insufficient Shares!", "error");
+            return;
         }
+        STATE.balance += totalCost;
+        p.qty -= qty;
+        if (p.qty <= 0) delete STATE.portfolio[stock.symbol];
+    }
 
-        const stock = STATE.currentStock;
-        const qty = parseInt(this.els.tradeQty.value);
-        if (isNaN(qty) || qty <= 0) return;
+    STATE.trades.push({
+        action,
+        symbol: stock.symbol,
+        qty,
+        price,
+        taxes,
+        time: new Date().toLocaleTimeString(),
+        rawTime: new Date().toISOString()
+    });
+    this.persist();
+    this.renderPortfolio();
+    this.renderActivity();
+    this.showToast(`${action === 'BUY' ? 'Bought' : 'Sold'} ${qty} shares of ${stock.symbol} successful.`);
+    this.closeTradePlanner();
+},
 
-        const price = STATE.stockData.get(stock.symbol)?.displayPrice || stock.price;
-        const net = price * qty;
-        const taxes = TaxEngine.calculate(action, price, qty).total;
-        const totalCost = action === 'BUY' ? net + taxes : net - taxes;
+persist() {
+    localStorage.setItem('paper_balance', STATE.balance);
+    localStorage.setItem('paper_portfolio', JSON.stringify(STATE.portfolio));
+    localStorage.setItem('paper_trades', JSON.stringify(STATE.trades));
+    localStorage.setItem('paper_history', JSON.stringify(STATE.history));
+},
 
-        if (action === 'BUY') {
-            if (STATE.balance < totalCost) {
-                this.showToast("Insufficient Balance!", "error");
-                return;
+snapshotPortfolio() {
+    const invested = Object.keys(STATE.portfolio).reduce((acc, sym) => {
+        const p = STATE.portfolio[sym];
+        const currentPrice = STATE.stockData.get(sym)?.displayPrice || p.avgCost;
+        return acc + (p.qty * currentPrice);
+    }, 0);
+    const total = STATE.balance + invested;
+
+    STATE.history.push({ time: Date.now(), val: total });
+    if (STATE.history.length > 50) STATE.history.shift(); // Keep last 50 points
+    this.persist();
+    this.updateChart();
+},
+
+updateChart() {
+    if (!this.els.chartPathLine || STATE.history.length < 2) return;
+
+    const data = STATE.history;
+    const width = 400;
+    const height = 150;
+    const padding = 20;
+
+    const minVal = Math.min(...data.map(d => d.val)) * 0.999;
+    const maxVal = Math.max(...data.map(d => d.val)) * 1.001;
+    const valRange = maxVal - minVal;
+
+    const points = data.map((d, i) => {
+        const x = (i / (data.length - 1)) * width;
+        const y = height - ((d.val - minVal) / valRange) * (height - padding * 2) - padding;
+        return { x, y };
+    });
+
+    // Generate Path (Cubic Bezier for smoothness)
+    let d = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+        const prev = points[i - 1];
+        const curr = points[i];
+        const cx = (prev.x + curr.x) / 2;
+        d += ` C ${cx} ${prev.y}, ${cx} ${curr.y}, ${curr.x} ${curr.y}`;
+    }
+
+    this.els.chartPathLine.setAttribute('d', d);
+
+    // Area Path
+    const areaD = d + ` L ${width} ${height} L 0 ${height} Z`;
+    this.els.chartPathArea.setAttribute('d', areaD);
+
+    const lastTotal = data[data.length - 1].val;
+    if (this.els.chartTotalVal) {
+        this.els.chartTotalVal.innerText = `₹${lastTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    }
+
+    // Update Portfolio Chart Labels
+    if (this.els.portfolioChartLabels) {
+        this.els.portfolioChartLabels.innerHTML = '';
+        const indices = [0, Math.floor(data.length / 3), Math.floor(data.length * 2 / 3), data.length - 1];
+        indices.forEach(idx => {
+            const rawTime = data[idx].time;
+            let label = '--:--';
+            if (rawTime) {
+                const date = new Date(rawTime);
+                label = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
             }
-            STATE.balance -= totalCost;
-            if (!STATE.portfolio[stock.symbol]) STATE.portfolio[stock.symbol] = { qty: 0, avgCost: 0 };
-            const p = STATE.portfolio[stock.symbol];
-            p.avgCost = (p.qty * p.avgCost + net) / (p.qty + qty);
-            p.qty += qty;
-        } else {
-            const p = STATE.portfolio[stock.symbol];
-            if (!p || p.qty < qty) {
-                this.showToast("Insufficient Shares!", "error");
-                return;
-            }
-            STATE.balance += totalCost;
-            p.qty -= qty;
-            if (p.qty <= 0) delete STATE.portfolio[stock.symbol];
-        }
-
-        STATE.trades.push({
-            action,
-            symbol: stock.symbol,
-            qty,
-            price,
-            taxes,
-            time: new Date().toLocaleTimeString(),
-            rawTime: new Date().toISOString()
+            const span = document.createElement('span');
+            span.innerText = label;
+            this.els.portfolioChartLabels.appendChild(span);
         });
-        this.persist();
-        this.renderPortfolio();
-        this.renderActivity();
-        this.showToast(`${action === 'BUY' ? 'Bought' : 'Sold'} ${qty} shares of ${stock.symbol} successful.`);
-        this.closeTradePlanner();
-    },
+    }
+},
 
-    persist() {
-        localStorage.setItem('paper_balance', STATE.balance);
-        localStorage.setItem('paper_portfolio', JSON.stringify(STATE.portfolio));
-        localStorage.setItem('paper_trades', JSON.stringify(STATE.trades));
-        localStorage.setItem('paper_history', JSON.stringify(STATE.history));
-    },
+renderPortfolio() {
+    let invested = 0;
+    let costBasisArray = []; // For P&L calc
+    let costBasis = 0;
 
-    snapshotPortfolio() {
-        const invested = Object.keys(STATE.portfolio).reduce((acc, sym) => {
-            const p = STATE.portfolio[sym];
-            const currentPrice = STATE.stockData.get(sym)?.displayPrice || p.avgCost;
-            return acc + (p.qty * currentPrice);
-        }, 0);
-        const total = STATE.balance + invested;
+    this.els.holdingsCont.innerHTML = '';
+    Object.keys(STATE.portfolio).forEach(sym => {
+        const p = STATE.portfolio[sym];
+        const currentPrice = STATE.stockData.get(sym)?.displayPrice || p.avgCost || 0;
+        const value = p.qty * currentPrice;
+        invested += value;
+        costBasis += p.qty * p.avgCost;
 
-        STATE.history.push({ time: Date.now(), val: total });
-        if (STATE.history.length > 50) STATE.history.shift(); // Keep last 50 points
-        this.persist();
-        this.updateChart();
-    },
-
-    updateChart() {
-        if (!this.els.chartPathLine || STATE.history.length < 2) return;
-
-        const data = STATE.history;
-        const width = 400;
-        const height = 150;
-        const padding = 20;
-
-        const minVal = Math.min(...data.map(d => d.val)) * 0.999;
-        const maxVal = Math.max(...data.map(d => d.val)) * 1.001;
-        const valRange = maxVal - minVal;
-
-        const points = data.map((d, i) => {
-            const x = (i / (data.length - 1)) * width;
-            const y = height - ((d.val - minVal) / valRange) * (height - padding * 2) - padding;
-            return { x, y };
-        });
-
-        // Generate Path (Cubic Bezier for smoothness)
-        let d = `M ${points[0].x} ${points[0].y}`;
-        for (let i = 1; i < points.length; i++) {
-            const prev = points[i - 1];
-            const curr = points[i];
-            const cx = (prev.x + curr.x) / 2;
-            d += ` C ${cx} ${prev.y}, ${cx} ${curr.y}, ${curr.x} ${curr.y}`;
-        }
-
-        this.els.chartPathLine.setAttribute('d', d);
-
-        // Area Path
-        const areaD = d + ` L ${width} ${height} L 0 ${height} Z`;
-        this.els.chartPathArea.setAttribute('d', areaD);
-
-        const lastTotal = data[data.length - 1].val;
-        if (this.els.chartTotalVal) {
-            this.els.chartTotalVal.innerText = `₹${lastTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-        }
-
-        // Update Portfolio Chart Labels
-        if (this.els.portfolioChartLabels) {
-            this.els.portfolioChartLabels.innerHTML = '';
-            const indices = [0, Math.floor(data.length / 3), Math.floor(data.length * 2 / 3), data.length - 1];
-            indices.forEach(idx => {
-                const rawTime = data[idx].time;
-                let label = '--:--';
-                if (rawTime) {
-                    const date = new Date(rawTime);
-                    label = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-                }
-                const span = document.createElement('span');
-                span.innerText = label;
-                this.els.portfolioChartLabels.appendChild(span);
-            });
-        }
-    },
-
-    renderPortfolio() {
-        let invested = 0;
-        let costBasisArray = []; // For P&L calc
-        let costBasis = 0;
-
-        this.els.holdingsCont.innerHTML = '';
-        Object.keys(STATE.portfolio).forEach(sym => {
-            const p = STATE.portfolio[sym];
-            const currentPrice = STATE.stockData.get(sym)?.displayPrice || p.avgCost || 0;
-            const value = p.qty * currentPrice;
-            invested += value;
-            costBasis += p.qty * p.avgCost;
-
-            const div = document.createElement('div');
-            div.className = `w-item ${STATE.currentStock?.symbol === sym ? 'active' : ''}`;
-            div.onclick = () => this.loadStock(sym);
-            const pnl = value - (p.qty * p.avgCost);
-            div.innerHTML = `
+        const div = document.createElement('div');
+        div.className = `w-item ${STATE.currentStock?.symbol === sym ? 'active' : ''}`;
+        div.onclick = () => this.loadStock(sym);
+        const pnl = value - (p.qty * p.avgCost);
+        div.innerHTML = `
                 <div class="w-top"><span>${sym} (${p.qty})</span><span>${value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
                 <div class="w-bot"><span>Avg: ${p.avgCost.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span><span class="${pnl >= 0 ? 'text-green' : 'text-red'}">${pnl >= 0 ? '+' : ''}${pnl.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
             `;
-            this.els.holdingsCont.appendChild(div);
-        });
+        this.els.holdingsCont.appendChild(div);
+    });
 
-        if (Object.keys(STATE.portfolio).length === 0) {
-            this.els.holdingsCont.innerHTML = '<div class="placeholder-msg">No active holdings</div>';
-        }
+    if (Object.keys(STATE.portfolio).length === 0) {
+        this.els.holdingsCont.innerHTML = '<div class="placeholder-msg">No active holdings</div>';
+    }
 
-        const total = STATE.balance + invested;
-        const pnl = invested - costBasis;
-        const pnlPct = costBasis > 0 ? (pnl / costBasis * 100).toFixed(2) : "0.00";
+    const total = STATE.balance + invested;
+    const pnl = invested - costBasis;
+    const pnlPct = costBasis > 0 ? (pnl / costBasis * 100).toFixed(2) : "0.00";
 
-        this.els.portCash.innerText = `₹${STATE.balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-        this.els.portInvested.innerText = `₹${invested.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-        if (this.els.portTotal) this.els.portTotal.innerText = `₹${total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-        this.els.portPnl.className = `stat-value ${pnl >= 0 ? 'text-green' : 'text-red'}`;
-        this.els.portPnl.innerText = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(0)} (${pnlPct}%)`;
+    this.els.portCash.innerText = `₹${STATE.balance.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    this.els.portInvested.innerText = `₹${invested.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    if (this.els.portTotal) this.els.portTotal.innerText = `₹${total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    this.els.portPnl.className = `stat-value ${pnl >= 0 ? 'text-green' : 'text-red'}`;
+    this.els.portPnl.innerText = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(0)} (${pnlPct}%)`;
 
-        // Also update chart display stat
-        if (this.els.chartTotalVal) {
-            this.els.chartTotalVal.innerText = `₹${total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-        }
-    },
+    // Also update chart display stat
+    if (this.els.chartTotalVal) {
+        this.els.chartTotalVal.innerText = `₹${total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    }
 
-    renderWatchlist() {
-        this.els.watchlistCont.innerHTML = '';
-        STATE.watchlist.forEach(sym => {
-            const stock = STATE.stockData.get(sym);
-            const div = document.createElement('div');
-            div.className = `w-item ${STATE.currentStock?.symbol === sym ? 'active' : ''}`;
-            div.onclick = () => { this.loadStock(sym); this.switchTab('tab-analysis'); };
-            if (stock && !isNaN(stock.displayPrice)) {
-                div.innerHTML = `
+    // Update Mobile Portfolio Stats
+    if (this.els.mPortTotal) this.els.mPortTotal.innerText = `₹${total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    if (this.els.mPortInvested) this.els.mPortInvested.innerText = `₹${invested.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+    if (this.els.mPortPnl) {
+        this.els.mPortPnl.innerText = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(0)} (${pnlPct}%)`;
+        this.els.mPortPnl.style.background = pnl >= 0 ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 0, 85, 0.1)';
+        this.els.mPortPnl.style.color = pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+    }
+},
+
+renderWatchlist() {
+    this.els.watchlistCont.innerHTML = '';
+    STATE.watchlist.forEach(sym => {
+        const stock = STATE.stockData.get(sym);
+        const div = document.createElement('div');
+        div.className = `w-item ${STATE.currentStock?.symbol === sym ? 'active' : ''}`;
+        div.onclick = () => { this.loadStock(sym); this.switchTab('tab-analysis'); };
+        if (stock && !isNaN(stock.displayPrice)) {
+            div.innerHTML = `
                     <div class="w-top"><span>${sym}</span><span>${stock.displayPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                     <div class="w-bot"><span>INR</span><span class="${stock.changePct >= 0 ? 'text-green' : 'text-red'}">${stock.changePct.toFixed(2)}%</span></div>
                 `;
-            } else {
-                div.innerHTML = `<span>${sym}</span><span style="opacity:0.5">---</span>`;
-            }
-            this.els.watchlistCont.appendChild(div);
-        });
-    },
+        } else {
+            div.innerHTML = `<span>${sym}</span><span style="opacity:0.5">---</span>`;
+        }
+        this.els.watchlistCont.appendChild(div);
+    });
+},
 
-    renderActivity() {
-        this.els.activityLog.innerHTML = '';
-        [...STATE.trades].reverse().slice(0, 5).forEach(trade => {
-            const div = document.createElement('div');
-            div.className = 'log-item';
-            div.innerHTML = `
+renderActivity() {
+    this.els.activityLog.innerHTML = '';
+    [...STATE.trades].reverse().slice(0, 5).forEach(trade => {
+        const div = document.createElement('div');
+        div.className = 'log-item';
+        div.innerHTML = `
                 <div><strong>${trade.action}</strong> ${trade.symbol} (${trade.qty})</div>
                 <div style="text-align:right">₹${(trade.price * trade.qty).toLocaleString('en-IN', { maximumFractionDigits: 0 })}<br><span style="font-size:0.6rem; color:var(--danger)">Tax: ₹${trade.taxes.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span></div>
             `;
-            this.els.activityLog.appendChild(div);
-        });
-    },
+        this.els.activityLog.appendChild(div);
+    });
+},
 
-    updateGlobalAI() {
-        if (STATE.activeTab === 'tab-overview') {
-            this.els.marketAiBox.innerHTML = ActionPlanner.generateMarketAdvice();
-        }
-    },
+updateGlobalAI() {
+    if (STATE.activeTab === 'tab-overview') {
+        this.els.marketAiBox.innerHTML = ActionPlanner.generateMarketAdvice();
+    }
+},
 
-    generatePlan() {
-        const input = this.els.planInput.value.trim();
-        if (!input) return;
+generatePlan() {
+    const input = this.els.planInput.value.trim();
+    if (!input) return;
 
-        const stock = STATE.currentStock ? STATE.stockData.get(STATE.currentStock.symbol) : null;
-        const res = ActionPlanner.generate(input, stock);
+    const stock = STATE.currentStock ? STATE.stockData.get(STATE.currentStock.symbol) : null;
+    const res = ActionPlanner.generate(input, stock);
 
-        // Add User Message
-        this.addChatMessage('user', input);
-        this.els.planInput.value = '';
+    // Add User Message
+    this.addChatMessage('user', input);
+    this.els.planInput.value = '';
 
-        // AI Thinking Delay
-        setTimeout(() => {
-            if (res.isGeneral) {
-                this.addChatMessage('ai', `<div class="ai-response">${res.content}</div>`);
-            } else {
-                const html = `
+    // AI Thinking Delay
+    setTimeout(() => {
+        if (res.isGeneral) {
+            this.addChatMessage('ai', `<div class="ai-response">${res.content}</div>`);
+        } else {
+            const html = `
                     <div class="ai-response">
                         <div class="strategy-title" style="color: ${res.isSellStrategy ? 'var(--accent-red)' : 'var(--accent-green)'}">${res.action} STRATEGY</div>
                         <p>${res.reasoning}</p>
@@ -1243,28 +1427,28 @@ const UI = {
                         <div class="intent-discovery">${res.followUp}</div>
                     </div>
                 `;
-                this.addChatMessage('ai', html);
-            }
-        }, 600);
-    },
+            this.addChatMessage('ai', html);
+        }
+    }, 600);
+},
 
-    addChatMessage(role, content) {
-        STATE.chatHistory.push({ role, content });
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `chat-msg ${role}`;
-        msgDiv.innerHTML = content;
-        this.els.chatHistory.appendChild(msgDiv);
-        this.els.chatHistory.scrollTop = this.els.chatHistory.scrollHeight;
-    },
+addChatMessage(role, content) {
+    STATE.chatHistory.push({ role, content });
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `chat-msg ${role}`;
+    msgDiv.innerHTML = content;
+    this.els.chatHistory.appendChild(msgDiv);
+    this.els.chatHistory.scrollTop = this.els.chatHistory.scrollHeight;
+},
 
-    showToast(msg, type = 'success') {
-        const t = this.els.toast;
-        t.innerText = msg;
-        t.style.borderLeft = `4px solid ${type === 'success' ? 'var(--success)' : 'var(--danger)'}`;
-        t.classList.add('show');
-        t.classList.remove('hidden');
-        setTimeout(() => t.classList.remove('show'), 3000);
-    }
-};
+showToast(msg, type = 'success') {
+    const t = this.els.toast;
+    t.innerText = msg;
+    t.style.borderLeft = `4px solid ${type === 'success' ? 'var(--success)' : 'var(--danger)'}`;
+    t.classList.add('show');
+    t.classList.remove('hidden');
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+    };
 
 document.addEventListener('DOMContentLoaded', () => UI.init());
