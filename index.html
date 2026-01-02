@@ -25,6 +25,10 @@
                     style="background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));">
                     <i class="fa-solid fa-bolt"></i>
                 </div>
+                <!-- Mobile Menu Button -->
+                <button id="mobile-menu-btn" class="mobile-menu-btn hidden-d">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
                 <span class="brand-name">TRADE<span class="accent-text"
                         style="color: var(--accent-cyan);">PILOT</span></span>
             </div>
@@ -176,8 +180,13 @@
                                     <h1 id="main-symbol">--</h1>
                                     <span id="main-name" class="sub-text">Sovereign Equity Asset</span>
                                 </div>
-                                <div id="live-status" class="live-badge hidden">
-                                    <span class="live-dot"></span> LIVE FEED
+                                <div class="header-right-group">
+                                    <button id="btn-toggle-watchlist" class="btn-icon-star" title="Add to Watchlist">
+                                        <i class="fa-regular fa-star"></i>
+                                    </button>
+                                    <div id="live-status" class="live-badge hidden">
+                                        <span class="live-dot"></span> LIVE FEED
+                                    </div>
                                 </div>
                             </div>
 

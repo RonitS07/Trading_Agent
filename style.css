@@ -459,6 +459,42 @@ body {
     align-items: flex-start;
 }
 
+.header-right-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.btn-icon-star {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border-radius: 50%;
+}
+
+.btn-icon-star:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--accent-cyan);
+}
+
+.btn-icon-star.active {
+    color: #ffd700;
+    /* Gold for starred */
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.btn-icon-star.active i {
+    font-weight: 900;
+    /* Solid star */
+}
+
 #main-symbol {
     font-size: 2.2rem;
     font-family: var(--font-data);
@@ -1423,4 +1459,203 @@ body {
 .planner-layout {
     max-width: 900px;
     margin: 0 auto;
+}
+
+/* --- MOBILE RESPONSIVE --- */
+@media (min-width: 769px) {
+    .hidden-d {
+        display: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        height: auto;
+        overflow-y: auto;
+    }
+
+    .main-layout {
+        position: relative;
+        /* For absolute sidebar */
+        flex-direction: column;
+    }
+
+    .mobile-menu-btn {
+        background: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin-right: 10px;
+        cursor: pointer;
+    }
+
+    .sidebar-left {
+        position: fixed;
+        left: 0;
+        top: 60px;
+        /* Below header */
+        bottom: 0;
+        width: 85%;
+        max-width: 300px;
+        background-color: var(--bg-dark);
+        z-index: 2000;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-right: 1px solid var(--border-color);
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .sidebar-left.open {
+        transform: translateX(0);
+    }
+
+    /* Overlay when menu is open */
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 1500;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+    }
+
+    .sidebar-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .content-area {
+        padding: 10px;
+        width: 100%;
+        overflow-x: hidden;
+    }
+
+    .portfolio-bar {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        padding: 10px;
+    }
+
+    .stat-card.dropdown {
+        display: none;
+        /* Hide Market Info on mobile to save space */
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-card {
+        grid-column: span 1;
+    }
+
+    /* Bigger tap targets */
+    .nav-btn {
+        padding: 12px 15px;
+        font-size: 0.9rem;
+        flex: 1;
+        justify-content: center;
+    }
+
+    .main-nav {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .header-content {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px 0;
+        height: auto;
+        /* Allow growth */
+    }
+
+    .top-header {
+        height: auto;
+        padding: 10px;
+    }
+
+    .brand {
+        margin-bottom: 5px;
+    }
+
+    .header-actions {
+        display: none;
+        /* Simplify header */
+    }
+
+    /* Analysis View Mobile */
+    .profile-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .header-right-group {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .price-hero {
+        flex-wrap: wrap;
+    }
+
+    #main-price {
+        font-size: 2.2rem;
+    }
+
+    .stock-chart-box {
+        height: 250px;
+        /* Smaller chart height */
+    }
+
+    svg {
+        overflow: visible;
+    }
+
+    .chart-controls {
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 5px;
+    }
+
+    .chart-rng {
+        padding: 8px 16px;
+        /* Bigger target */
+    }
+
+    .intent-bar {
+        flex-direction: column;
+    }
+
+    .btn-buy-primary,
+    .btn-sell-primary {
+        width: 100%;
+        padding: 16px;
+    }
+
+    /* Planner */
+    .planner-card.transaction-sheet {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: auto;
+        margin: 0;
+        border-radius: 16px 16px 0 0;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+        z-index: 1000;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+
+    .planner-card.transaction-sheet:not(.hidden) {
+        transform: translateY(0);
+    }
 }

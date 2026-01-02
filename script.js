@@ -4,7 +4,7 @@
  */
 
 const STATE = {
-    watchlist: JSON.parse(localStorage.getItem('watchlist')) || ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS"],
+    watchlist: JSON.parse(localStorage.getItem('watchlist')) || [],
     currentStock: null,
     stockData: new Map(),
 
@@ -29,22 +29,90 @@ const STATE = {
 };
 
 // --- DATA LAYER ---
-async function searchAPI(query) {
-    if (query.length < 2) return [];
-    try {
-        const res = await fetch(`/api/search?q=${query}`);
-        return await res.json();
-    } catch { return []; }
+// --- MOCK DATA ENGINE (STATIC SITE SUPPORT) ---
+class MockDataEngine {
+    static STOCKS = [
+        { symbol: "RELIANCE.NS", name: "Reliance Industries Ltd", price: 2500.00 },
+        { symbol: "TCS.NS", name: "Tata Consultancy Services", price: 3400.00 },
+        { symbol: "HDFCBANK.NS", name: "HDFC Bank Ltd", price: 1600.00 },
+        { symbol: "INFY.NS", name: "Infosys Ltd", price: 1450.00 },
+        { symbol: "ICICIBANK.NS", name: "ICICI Bank Ltd", price: 950.00 },
+        { symbol: "SBIN.NS", name: "State Bank of India", price: 580.00 },
+        { symbol: "BHARTIARTL.NS", name: "Bharti Airtel Ltd", price: 860.00 },
+        { symbol: "ITC.NS", name: "ITC Ltd", price: 440.00 },
+        { symbol: "KOTAKBANK.NS", name: "Kotak Mahindra Bank", price: 1800.00 },
+        { symbol: "LT.NS", name: "Larsen & Toubro Ltd", price: 2900.00 },
+        { symbol: "AXISBANK.NS", name: "Axis Bank Ltd", price: 980.00 },
+        { symbol: "MARUTI.NS", name: "Maruti Suzuki India", price: 10400.00 },
+        { symbol: "TATAMOTORS.NS", name: "Tata Motors Ltd", price: 620.00 },
+        { symbol: "SUNPHARMA.NS", name: "Sun Pharmaceutical", price: 1150.00 },
+        { symbol: "ADANIENT.NS", name: "Adani Enterprises Ltd", price: 2400.00 }
+    ];
+
+    static async search(query) {
+        if (!query) return [];
+        const q = query.toLowerCase();
+        return new Promise(resolve => {
+            setTimeout(() => {
+                const results = this.STOCKS.filter(s =>
+                    s.symbol.toLowerCase().includes(q) || s.name.toLowerCase().includes(q)
+                ).map(s => ({ symbol: s.symbol, shortname: s.name }));
+                resolve(results);
+            }, 200);
+        });
+    }
+
+    static async getQuote(symbol) {
+        return new Promise(resolve => {
+            const stock = this.STOCKS.find(s => s.symbol === symbol) || { symbol, name: symbol, price: 1000 };
+
+            // Generate pseudo-random live data
+            const volatility = 0.015; // 1.5% daily volatility
+            const randomChange = (Math.random() * volatility * 2) - volatility;
+            const currentPrice = stock.price * (1 + randomChange);
+            const changePct = randomChange * 100;
+
+            resolve({
+                symbol: stock.symbol,
+                price: currentPrice,
+                displayPrice: currentPrice,
+                changePct: changePct,
+                volume: (Math.random() * 5 + 1).toFixed(2) + "M",
+                dayHigh: currentPrice * (1 + Math.random() * 0.01),
+                dayLow: currentPrice * (1 - Math.random() * 0.01)
+            });
+        });
+    }
+
+    static async getHistory(symbol, range) {
+        return new Promise(resolve => {
+            const data = [];
+            const now = Math.floor(Date.now() / 1000);
+            let points = 50;
+            let interval = 300; // 5 min default
+
+            if (range === '1d') { points = 75; interval = 300; }
+            if (range === '5d') { points = 100; interval = 3600; }
+            if (range === '1mo') { points = 30; interval = 86400; }
+            if (range === '1y') { points = 52; interval = 604800; }
+
+            const basePrice = (this.STOCKS.find(s => s.symbol === symbol)?.price) || 1000;
+            let price = basePrice;
+
+            for (let i = points; i >= 0; i--) {
+                const time = now - (i * interval);
+                const drift = (Math.random() - 0.5) * (range === '1d' ? 0.005 : 0.02);
+                price = price * (1 + drift);
+                data.push({ time, price });
+            }
+            resolve(data);
+        });
+    }
 }
 
-async function getQuote(symbol) {
-    try {
-        const res = await fetch(`/api/quote?symbol=${symbol}`);
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        return data;
-    } catch { return null; }
-}
+// Wrapper functions to maintain compatibility
+async function searchAPI(query) { return MockDataEngine.search(query); }
+async function getQuote(symbol) { return MockDataEngine.getQuote(symbol); }
 
 // --- TAX ENGINE (INDIAN MARKETS) ---
 class TaxEngine {
@@ -106,6 +174,10 @@ class LiveTicker {
     }
 
     async sync() {
+        // RESYNC: Update active symbols from global state watchlist + current stock
+        this.activeSymbols = new Set(STATE.watchlist);
+        if (STATE.currentStock) this.activeSymbols.add(STATE.currentStock.symbol);
+
         const symbols = Array.from(this.activeSymbols);
         for (const sym of symbols) {
             const data = await getQuote(sym);
@@ -137,9 +209,13 @@ class LiveTicker {
             const change = (Math.random() - 0.5) * (stock.displayPrice * stock.volatility);
             stock.displayPrice += change;
 
-            UI.updateStockDisplay(sym, stock, change > 0);
+            // Pass false to skip watchlist render in individual updates
+            UI.updateStockDisplay(sym, stock, change > 0, false);
             if (STATE.currentStock?.symbol === sym) UI.updateMarketSentiment();
         });
+
+        // ONE render per tick for performance
+        UI.renderWatchlist();
 
         // Dynamic dashboard updates
         if (STATE.activeTab === 'tab-overview') UI.renderPortfolio();
@@ -393,13 +469,20 @@ const UI = {
         securityModal: document.getElementById('security-modal'),
         securityPin: document.getElementById('security-pin'),
         btnSecurityConfirm: document.getElementById('btn-security-confirm'),
-        btnSecurityCancel: document.getElementById('btn-security-cancel')
+        btnSecurityConfirm: document.getElementById('btn-security-confirm'),
+        btnSecurityCancel: document.getElementById('btn-security-cancel'),
+        btnToggleWatchlist: document.getElementById('btn-toggle-watchlist'),
+
+        // Mobile Menu
+        mobileMenuBtn: document.getElementById('mobile-menu-btn'),
+        sidebar: document.querySelector('.sidebar-left')
     },
 
     pendingTrade: null,
 
     init() {
         Ticker.start();
+        this.createMobileOverlay();
         this.bindEvents();
         this.updateMarketStatus();
         this.renderPortfolio();
@@ -408,6 +491,12 @@ const UI = {
         this.updateChart();
         setInterval(() => this.updateMarketStatus(), 30000);
         setInterval(() => this.snapshotPortfolio(), 60000); // Snapshot once a minute
+    },
+
+    createMobileOverlay() {
+        this.els.sidebarOverlay = document.createElement('div');
+        this.els.sidebarOverlay.className = 'sidebar-overlay';
+        document.body.appendChild(this.els.sidebarOverlay);
     },
 
     bindEvents() {
@@ -470,6 +559,26 @@ const UI = {
         // Chart Interactive Events
         this.els.stockChartBox.onmousemove = (e) => this.handleChartHover(e);
         this.els.stockChartBox.onmouseleave = () => this.hideChartTooltip();
+
+        // Watchlist Toggle
+        if (this.els.btnToggleWatchlist) {
+            this.els.btnToggleWatchlist.onclick = () => this.toggleWatchlist();
+        }
+
+        // Mobile Menu
+        if (this.els.mobileMenuBtn) {
+            this.els.mobileMenuBtn.onclick = () => {
+                this.els.sidebar.classList.toggle('open');
+                this.els.sidebarOverlay.classList.toggle('active');
+            };
+        }
+
+        if (this.els.sidebarOverlay) {
+            this.els.sidebarOverlay.onclick = () => {
+                this.els.sidebar.classList.remove('open');
+                this.els.sidebarOverlay.classList.remove('active');
+            };
+        }
     },
 
     isMarketOpen() {
@@ -565,11 +674,13 @@ const UI = {
             const div = document.createElement('div');
             div.className = 'w-item';
             div.innerHTML = `<span>${item.symbol}</span><span style="font-size:0.7rem; opacity:0.6">${item.shortname}</span>`;
-            div.onclick = () => {
-                this.loadStock(item.symbol);
-                Ticker.track(item.symbol);
+            div.onclick = async () => {
                 this.els.omnibar.value = '';
                 this.els.searchResults.classList.add('hidden');
+
+                await this.loadStock(item.symbol);
+                // Track AFTER loading so currentStock is updated for sync
+                Ticker.track(item.symbol);
                 this.switchTab('tab-analysis');
             };
             this.els.searchResults.appendChild(div);
@@ -591,22 +702,47 @@ const UI = {
         this.updateStockDisplay(symbol, STATE.currentStock);
         this.updateTradePreview();
         this.fetchStockHistory(symbol, STATE.chartRange);
+        this.updateWatchlistButtonState(symbol);
         this.closeTradePlanner();
+    },
+
+    updateWatchlistButtonState(symbol) {
+        if (!this.els.btnToggleWatchlist) return;
+        const inList = STATE.watchlist.includes(symbol);
+        this.els.btnToggleWatchlist.classList.toggle('active', inList);
+        this.els.btnToggleWatchlist.innerHTML = inList ? '<i class="fa-solid fa-star"></i>' : '<i class="fa-regular fa-star"></i>';
+    },
+
+    toggleWatchlist() {
+        const symbol = STATE.currentStock?.symbol;
+        if (!symbol) return;
+
+        const idx = STATE.watchlist.indexOf(symbol);
+        if (idx === -1) {
+            STATE.watchlist.push(symbol);
+            this.showToast(`${symbol} added to Watchlist`);
+        } else {
+            STATE.watchlist.splice(idx, 1);
+            this.showToast(`${symbol} removed from Watchlist`);
+        }
+
+        localStorage.setItem('watchlist', JSON.stringify(STATE.watchlist));
+        this.updateWatchlistButtonState(symbol);
+        this.renderWatchlist();
+        Ticker.sync(); // Refresh data for new list
     },
 
     async fetchStockHistory(symbol, range = '1d') {
         if (!symbol) return;
         if (this.els.stockChartLoading) this.els.stockChartLoading.classList.remove('hidden');
         try {
-            const resp = await fetch(`/api/history?symbol=${symbol}&range=${range}`);
-            const data = await resp.json();
-            if (data.error) throw new Error(data.error);
+            const data = await MockDataEngine.getHistory(symbol, range);
 
             if (!STATE.stockHistory.has(symbol)) STATE.stockHistory.set(symbol, {});
             STATE.stockHistory.get(symbol)[range] = data;
 
             this.renderStockChart(data);
-            this.updateMarketSentiment();
+            this.updateMarketSentiment(); // Uses history or random
         } catch (e) {
             console.error("History fetch failed:", e);
         } finally {
@@ -777,7 +913,7 @@ const UI = {
         }
     },
 
-    updateStockDisplay(symbol, stock, isUpTick = null) {
+    updateStockDisplay(symbol, stock, isUpTick = null, shouldRenderWatchlist = true) {
         if (STATE.currentStock?.symbol === symbol) {
             this.els.mainSymbol.innerText = symbol;
             this.els.mainName.innerText = "NSE/BSE Listed Equity";
@@ -801,7 +937,7 @@ const UI = {
                 setTimeout(() => this.els.mainPrice.classList.remove('text-green', 'text-red'), 500);
             }
         }
-        this.renderWatchlist();
+        if (shouldRenderWatchlist) this.renderWatchlist();
     },
 
     updateTradePreview() {
