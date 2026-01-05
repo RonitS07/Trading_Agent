@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>TradePilot Mobile - Independent Terminal</title>
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="mobile_style.css?v=2">
+</head>
+
+<body class="mobile-app-theme">
+    <!-- Status Bar Spacer (For iOS/Android Integration) -->
+    <div class="m-status-bar"></div>
+
+    <!-- Main App Container -->
+    <div id="m-app-root">
+
+        <!-- Top Navigation / Header -->
+        <header class="m-top-bar">
+            <div class="m-profile-pill">
+                <div class="m-avatar">S</div>
+                <div class="m-balance-group">
+                    <span class="m-balance-label">WALLET</span>
+                    <span id="m-port-cash" class="m-balance-val">₹1.00L</span>
+                </div>
+            </div>
+            <div class="m-top-actions">
+                <button id="m-btn-search" class="m-icon-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+                <div id="m-market-status" class="m-market-chip">
+                    <span class="m-dot"></span>
+                    <span class="m-status-text">BSE LIVE</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dynamic Content Area -->
+        <main id="m-main-content">
+
+            <!-- HOME VIEW -->
+            <section id="m-view-home" class="m-view active">
+                <!-- Portfolio Glass Card -->
+                <div class="m-portfolio-card">
+                    <div class="m-card-header">
+                        <span>NET WORTH</span>
+                        <div class="m-badge">PRO</div>
+                    </div>
+                    <div class="m-card-body">
+                        <h2 id="m-total-value">₹1,00,000</h2>
+                        <div id="m-port-pnl" class="m-pnl-pill up">
+                            <i class="fa-solid fa-caret-up"></i>
+                            <span>+0.00%</span>
+                        </div>
+                    </div>
+                    <div class="m-card-footer">
+                        <div class="m-footer-item">
+                            <span>INVESTED</span>
+                            <strong id="m-total-invested">₹0</strong>
+                        </div>
+                        <div class="m-footer-item">
+                            <span>UNREALIZED</span>
+                            <strong id="m-port-unrealized">₹0</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Quick Insights -->
+                <div class="m-section-header">
+                    <h3>MARKET PULSE</h3>
+                    <a href="#" class="m-link">AI ANALYSIS</a>
+                </div>
+                <div id="m-insight-chips" class="m-chip-row">
+                    <!-- Dynamic Insight Chips -->
+                </div>
+
+                <!-- Watchlist -->
+                <div class="m-section-header">
+                    <h3>WATCHLIST</h3>
+                    <button class="m-btn-text">EDIT</button>
+                </div>
+                <div id="m-watchlist" class="m-scroll-list">
+                    <!-- Watchlist items go here -->
+                </div>
+            </section>
+
+            <!-- ANALYSIS VIEW -->
+            <section id="m-view-analysis" class="m-view">
+                <div class="m-analysis-card">
+                    <div class="m-ticker-info">
+                        <h1 id="m-main-symbol">RELIANCE</h1>
+                        <div class="m-price-group">
+                            <span id="m-main-price">₹2,456.90</span>
+                            <span id="m-main-change" class="up">+1.24%</span>
+                        </div>
+                    </div>
+
+                    <div class="m-chart-stage">
+                        <div class="m-chart-overlay">
+                            <span id="m-chart-label">LIVE TRACK</span>
+                        </div>
+                        <svg id="m-stock-svg" viewBox="0 0 400 180" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="m-gradient-up" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" style="stop-color:var(--neon-green);stop-opacity:0.4" />
+                                    <stop offset="100%" style="stop-color:var(--neon-green);stop-opacity:0" />
+                                </linearGradient>
+                            </defs>
+                            <path id="m-stock-path" d="" fill="none" stroke="var(--neon-green)" stroke-width="2.5" />
+                            <path id="m-stock-area" d="" fill="url(#m-gradient-up)" opacity="0.3" />
+                        </svg>
+                    </div>
+
+                    <div class="m-stats-grid">
+                        <div class="m-stat-box">
+                            <span>DAY HIGH</span>
+                            <strong id="m-day-high">₹0.00</strong>
+                        </div>
+                        <div class="m-stat-box">
+                            <span>DAY LOW</span>
+                            <strong id="m-day-low">₹0.00</strong>
+                        </div>
+                        <div class="m-stat-box">
+                            <span>VOLUME</span>
+                            <strong id="m-volume">0.0M</strong>
+                        </div>
+                        <div class="m-stat-box">
+                            <span>S/R RATIO</span>
+                            <strong id="m-sr-ratio">1.2</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="m-action-floor">
+                    <button class="m-trade-btn buy" onclick="MobileUI.openTradeSheet('BUY')">BUY EQUITY</button>
+                    <button class="m-trade-btn sell" onclick="MobileUI.openTradeSheet('SELL')">SELL EQUITY</button>
+                </div>
+            </section>
+
+            <!-- AI PLANNER VIEW -->
+            <section id="m-view-ai" class="m-view">
+                <div class="m-ai-chat-container">
+                    <div class="m-ai-header">
+                        <i class="fa-solid fa-robot"></i>
+                        <span>AI STRATEGIST</span>
+                    </div>
+                    <div id="m-chat-history" class="m-chat-box">
+                        <!-- Messages -->
+                        <div class="chat-msg ai">How can I optimize your portfolio today? I recommend checking RELIANCE
+                            support zones.</div>
+                    </div>
+                    <div class="m-chat-input-area">
+                        <input type="text" id="m-plan-input" placeholder="Ask about stocks, strategy...">
+                        <button id="m-btn-send-ai"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PORTFOLIO VIEW -->
+            <section id="m-view-portfolio" class="m-view">
+                <div class="m-section-title">ACTIVE POSITIONS</div>
+                <div id="m-holdings" class="m-full-list">
+                    <!-- Holding items -->
+                </div>
+
+                <div class="m-section-title">TRANSACTION LOG</div>
+                <div id="m-activity-log" class="m-history-list">
+                    <!-- Trades -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Innovative Bottom Navigation -->
+        <nav class="m-bottom-nav">
+            <button class="m-nav-btn active" data-mview="m-view-home">
+                <i class="fa-solid fa-house"></i>
+                <span>HOME</span>
+            </button>
+            <button class="m-nav-btn" data-mview="m-view-analysis">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>MARKET</span>
+            </button>
+            <button class="m-nav-btn" data-mview="m-view-ai">
+                <div class="m-ai-pulse"><i class="fa-solid fa-robot"></i></div>
+                <span>AI</span>
+            </button>
+            <button class="m-nav-btn" data-mview="m-view-portfolio">
+                <i class="fa-solid fa-briefcase"></i>
+                <span>ASSETS</span>
+            </button>
+        </nav>
+
+        <!-- Dynamic Sheets (Trade Hub) -->
+        <div id="m-trade-sheet" class="m-overlay hidden">
+            <div class="m-sheet">
+                <div class="m-sheet-handle"></div>
+                <div class="m-sheet-content">
+                    <div class="m-sheet-header">
+                        <h3 id="m-sheet-title">BUY RELIANCE</h3>
+                        <button id="m-btn-close-sheet" class="m-close-btn"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                    <div class="m-sheet-body">
+                        <div class="m-input-card">
+                            <div class="m-input-label">QUANTITY</div>
+                            <div class="m-qty-stepper">
+                                <button onclick="MobileUI.adjustQty(-1)">-</button>
+                                <input type="number" id="m-trade-qty" value="1" min="1">
+                                <button onclick="MobileUI.adjustQty(1)">+</button>
+                            </div>
+                        </div>
+                        <div class="m-order-summary">
+                            <div class="m-summary-row">
+                                <span>MARKET PRICE</span>
+                                <span id="m-preview-price">₹0.00</span>
+                            </div>
+                            <div class="m-summary-row highlight">
+                                <span>TOTAL ESTIMATE</span>
+                                <span id="m-trade-total">₹0.00</span>
+                            </div>
+                        </div>
+                        <button id="m-btn-confirm-trade" class="m-execute-btn">EXECUTE ORDER</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Global Toast -->
+        <div id="m-toast" class="m-toast hidden"></div>
+    </div>
+
+    <!-- Core State Shared, Interaction Specialized -->
+    <script src="script.js?v=5"></script>
+    <script src="mobile_script.js?v=2"></script>
+</body>
+
+</html>

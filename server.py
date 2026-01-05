@@ -5,7 +5,7 @@ import urllib.parse
 import json
 import ssl
 
-PORT = 8001
+PORT = 8008
 
 class YahooProxyHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):

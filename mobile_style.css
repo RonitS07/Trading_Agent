@@ -1,0 +1,612 @@
+:root {
+    --deep-black: #080a0d;
+    --card-bg: rgba(20, 26, 35, 0.7);
+    --border-glass: rgba(255, 255, 255, 0.08);
+    --text-white: #f8fafc;
+    --text-muted: #94a3b8;
+    --neon-blue: #0ea5e9;
+    --neon-green: #22c55e;
+    --neon-red: #ef4444;
+    --neon-amber: #f59e0b;
+    --glass-blur: blur(16px);
+    --safe-bottom: env(safe-area-inset-bottom);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body.mobile-app-theme {
+    background-color: var(--deep-black);
+    color: var(--text-white);
+    font-family: 'Outfit', sans-serif;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Status Bar Spacer */
+.m-status-bar {
+    height: env(safe-area-inset-top, 20px);
+    background: var(--deep-black);
+}
+
+#m-app-root {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding-bottom: calc(70px + var(--safe-bottom));
+}
+
+/* Top Bar */
+.m-top-bar {
+    height: 64px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    background: rgba(8, 10, 13, 0.9);
+    backdrop-filter: var(--glass-blur);
+    z-index: 100;
+}
+
+.m-profile-pill {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.m-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--neon-blue), #6366f1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.9rem;
+    box-shadow: 0 0 15px rgba(14, 165, 233, 0.3);
+}
+
+.m-balance-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.m-balance-label {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.m-balance-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.m-market-chip {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.m-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--neon-green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--neon-green);
+}
+
+.m-status-text {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--neon-green);
+}
+
+/* Content Area */
+#m-main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.m-view {
+    display: none;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.m-view.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Portfolio Card */
+.m-portfolio-card {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.4));
+    border: 1px solid var(--border-glass);
+    border-radius: 24px;
+    padding: 24px;
+    backdrop-filter: var(--glass-blur);
+    margin-bottom: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.m-card-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.m-badge {
+    background: gold;
+    color: black;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.6rem;
+    font-weight: 900;
+}
+
+.m-card-body h2 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+}
+
+.m-pnl-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.m-pnl-pill.up {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--neon-green);
+}
+
+.m-pnl-pill.down {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--neon-red);
+}
+
+.m-card-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-glass);
+}
+
+.m-footer-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.m-footer-item span {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.m-footer-item strong {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+}
+
+/* Section Controls */
+.m-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.m-section-header h3 {
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+}
+
+.m-btn-text {
+    background: none;
+    border: none;
+    color: var(--neon-blue);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+/* Chip Row */
+.m-chip-row {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 20px;
+    scrollbar-width: none;
+}
+
+.m-chip-row::-webkit-scrollbar {
+    display: none;
+}
+
+.m-insight-chip {
+    background: var(--card-bg);
+    border: 1px solid var(--border-glass);
+    padding: 12px 18px;
+    border-radius: 16px;
+    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.m-insight-chip .sym {
+    font-weight: 800;
+    font-size: 0.9rem;
+}
+
+.m-insight-chip .tag {
+    font-size: 0.65rem;
+    color: var(--neon-green);
+    font-weight: 600;
+}
+
+/* Watchlist Item */
+.m-w-item {
+    background: var(--card-bg);
+    border: 1px solid var(--border-glass);
+    border-radius: 20px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    transition: 0.2s;
+}
+
+.m-w-item.active {
+    border-color: var(--neon-blue);
+    background: rgba(14, 165, 233, 0.05);
+}
+
+.m-w-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.m-w-sym {
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.m-w-name {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.m-w-right {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.m-w-price {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.m-w-change {
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.m-w-change.up {
+    color: var(--neon-green);
+}
+
+.m-w-change.down {
+    color: var(--neon-red);
+}
+
+/* Bottom Nav */
+.m-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    height: calc(70px + var(--safe-bottom));
+    background: rgba(8, 10, 13, 0.95);
+    backdrop-filter: var(--glass-blur);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding-bottom: var(--safe-bottom);
+    border-top: 1px solid var(--border-glass);
+    z-index: 500;
+}
+
+.m-nav-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    width: 25%;
+    transition: 0.3s;
+}
+
+.m-nav-btn.active {
+    color: var(--neon-blue);
+}
+
+.m-nav-btn i {
+    font-size: 1.4rem;
+}
+
+.m-ai-pulse {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #6366f1, var(--neon-blue));
+    border-radius: 50%;
+    margin-top: -30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px rgba(14, 165, 233, 0.5);
+    color: white;
+}
+
+.m-ai-pulse i {
+    font-size: 1.2rem;
+}
+
+/* Analysis Card */
+.m-analysis-card {
+    background: var(--card-bg);
+    border-radius: 24px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.m-ticker-info h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.m-price-group {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.m-price-group span:first-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.m-chart-stage {
+    height: 180px;
+    margin: 24px 0;
+    position: relative;
+}
+
+.m-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.m-stat-box {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px;
+    border-radius: 12px;
+}
+
+.m-stat-box span {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.m-stat-box strong {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+}
+
+.m-action-floor {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.m-trade-btn {
+    height: 56px;
+    border-radius: 16px;
+    border: none;
+    font-weight: 900;
+    font-size: 1rem;
+    letter-spacing: 1px;
+}
+
+.m-trade-btn.buy {
+    background: var(--neon-green);
+    color: black;
+}
+
+.m-trade-btn.sell {
+    background: var(--neon-red);
+    color: white;
+}
+
+/* Sheet Overlay */
+.m-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.m-overlay.hidden {
+    display: none;
+}
+
+.m-sheet {
+    background: #0d121a;
+    border-top: 1px solid var(--border-glass);
+    border-radius: 32px 32px 0 0;
+    padding: 24px;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+.m-sheet-handle {
+    width: 40px;
+    height: 4px;
+    background: #334155;
+    border-radius: 2px;
+    margin: -12px auto 20px;
+}
+
+.m-execute-btn {
+    width: 100%;
+    height: 64px;
+    background: var(--neon-blue);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-size: 1.1rem;
+    font-weight: 900;
+    margin-top: 24px;
+}
+
+/* AI Chat */
+.m-chat-box {
+    height: 300px;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.chat-msg {
+    max-width: 85%;
+    padding: 12px 16px;
+    border-radius: 16px;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.chat-msg.ai {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    align-self: flex-start;
+}
+
+.chat-msg.user {
+    background: var(--neon-blue);
+    color: white;
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.m-chat-input-area {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: #0d121a;
+    border-radius: 24px;
+    margin: 16px;
+}
+
+.m-chat-input-area input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: white;
+    outline: none;
+}
+
+#m-btn-send-ai {
+    width: 44px;
+    height: 44px;
+    background: var(--neon-blue);
+    border: none;
+    border-radius: 14px;
+    color: white;
+}
+
+/* Toast */
+.m-toast {
+    position: fixed;
+    top: 60px;
+    left: 20px;
+    right: 20px;
+    background: rgba(14, 165, 233, 0.9);
+    color: white;
+    padding: 16px;
+    border-radius: 16px;
+    text-align: center;
+    font-weight: 700;
+    z-index: 2000;
+    animation: fadeIn 0.3s;
+}
+
+.m-toast.hidden {
+    display: none;
+}

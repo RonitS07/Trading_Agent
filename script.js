@@ -121,13 +121,15 @@ class LiveTicker {
                 }
             }
         }
-        UI.renderWatchlist();
-        UI.renderPortfolio();
-        UI.updateGlobalAI();
+        DesktopUI.renderWatchlist();
+        MobileUI.renderWatchlist();
+        DesktopUI.renderPortfolio();
+        MobileUI.renderPortfolio();
+        DesktopUI.updateGlobalAI();
     }
 
     tick() {
-        const market = UI.getMarketStatus();
+        const market = DesktopUI.getMarketStatus();
         if (!market.isOpen) return;
 
         this.activeSymbols.forEach(sym => {
@@ -137,13 +139,20 @@ class LiveTicker {
             const change = (Math.random() - 0.5) * (stock.displayPrice * stock.volatility);
             stock.displayPrice += change;
 
-            UI.updateStockDisplay(sym, stock, change > 0);
-            if (STATE.currentStock?.symbol === sym) UI.updateMarketSentiment();
+            DesktopUI.updateStockDisplay(sym, stock, change > 0);
+            MobileUI.updateStockDisplay(sym, stock, change > 0);
+            if (STATE.currentStock?.symbol === sym) {
+                DesktopUI.updateMarketSentiment();
+                MobileUI.updateMarketSentiment();
+            }
         });
 
         // Dynamic dashboard updates
-        if (STATE.activeTab === 'tab-overview') UI.renderPortfolio();
-        if (STATE.activeTab === 'tab-analysis' && STATE.currentStock) UI.updateTradePreview();
+        if (STATE.activeTab === 'tab-overview') DesktopUI.renderPortfolio();
+        if (STATE.activeTab === 'tab-analysis' && STATE.currentStock) DesktopUI.updateTradePreview();
+
+        // Mobile updates
+        MobileUI.updateTradePreview();
     }
 
     track(sym) {
@@ -306,7 +315,7 @@ class ActionPlanner {
 }
 
 // --- UI CONTROLLER ---
-const UI = {
+const DesktopUI = {
     els: {
         navBtns: document.querySelectorAll('.nav-btn'),
         tabs: document.querySelectorAll('.tab-content'),
@@ -1089,4 +1098,9 @@ const UI = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => UI.init());
+// MobileUI removed from script.js
+
+document.addEventListener('DOMContentLoaded', () => {
+    DesktopUI.init();
+});
+
