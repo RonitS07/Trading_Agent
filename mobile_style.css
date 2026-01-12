@@ -19,6 +19,20 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+/* Invisible Scrollbar - Works on all scrollable areas */
+*::-webkit-scrollbar {
+    width: 0px;
+    height: 0px;
+    background: transparent;
+}
+
+* {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+}
+
 body.mobile-app-theme {
     background-color: var(--deep-black);
     color: var(--text-white);

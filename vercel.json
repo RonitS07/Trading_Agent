@@ -2,23 +2,31 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/*.py",
+      "src": "api/search.py",
       "use": "@vercel/python"
     },
     {
-      "src": "*.html",
-      "use": "@vercel/static"
+      "src": "api/quote.py",
+      "use": "@vercel/python"
     },
     {
-      "src": "*.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "*.js",
-      "use": "@vercel/static"
+      "src": "api/history.py",
+      "use": "@vercel/python"
     }
   ],
   "routes": [
+    {
+      "src": "/api/search",
+      "dest": "/api/search.py"
+    },
+    {
+      "src": "/api/quote",
+      "dest": "/api/quote.py"
+    },
+    {
+      "src": "/api/history",
+      "dest": "/api/history.py"
+    },
     {
       "src": "/mobile.html",
       "dest": "/mobile.html"
@@ -28,7 +36,7 @@
       "dest": "/index.html"
     },
     {
-      "src": "/(.*)",
+      "src": "/(.*\\.(css|js|html|ico|png|jpg|svg))",
       "dest": "/$1"
     }
   ]
