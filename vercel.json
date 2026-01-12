@@ -1,43 +1,16 @@
 {
-  "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "api/search.py",
-      "use": "@vercel/python"
+      "source": "/api/search",
+      "destination": "/api/search"
     },
     {
-      "src": "api/quote.py",
-      "use": "@vercel/python"
+      "source": "/api/quote",
+      "destination": "/api/quote"
     },
     {
-      "src": "api/history.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/search",
-      "dest": "/api/search.py"
-    },
-    {
-      "src": "/api/quote",
-      "dest": "/api/quote.py"
-    },
-    {
-      "src": "/api/history",
-      "dest": "/api/history.py"
-    },
-    {
-      "src": "/mobile.html",
-      "dest": "/mobile.html"
-    },
-    {
-      "src": "/",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/(.*\\.(css|js|html|ico|png|jpg|svg))",
-      "dest": "/$1"
+      "source": "/api/history",
+      "destination": "/api/history"
     }
   ]
 }

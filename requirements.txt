@@ -1,1 +1,1 @@
-flask
+# No external dependencies - using Python stdlib only
