@@ -27,17 +27,32 @@ window.MobileUI = {
         chatHistory: document.getElementById('m-chat-history'),
         planInput: document.getElementById('m-plan-input'),
         btnSendAi: document.getElementById('m-btn-send-ai'),
-        toast: document.getElementById('m-toast')
+        totalInvested: document.getElementById('m-total-invested'),
+        portUnrealized: document.getElementById('m-port-unrealized'),
+        toast: document.getElementById('m-toast'),
+
+        // Advanced Charting elements
+        chartLabels: document.getElementById('m-chart-labels'),
+        chartCrosshair: document.getElementById('m-chart-crosshair'),
+        chartStage: document.querySelector('.m-chart-stage'),
+
+        // Search специализирован elements
+        btnSearch: document.getElementById('m-btn-search'),
+        searchOverlay: document.getElementById('m-search-overlay'),
+        searchInput: document.getElementById('m-search-input'),
+        searchResultList: document.getElementById('m-search-results'),
+        btnCloseSearch: document.getElementById('m-btn-close-search-overlay')
     },
 
     init() {
+        if (!document.getElementById('m-app-root')) return;
+        Ticker.start();
         this.bindEvents();
         setTimeout(() => {
             if (typeof STATE !== 'undefined' && !STATE.currentStock && STATE.watchlist.length > 0) {
                 this.selectStock(STATE.watchlist[0]);
             }
         }, 500);
-        this.startSync();
         console.log("⚡ Mobile Terminal Primed");
     },
 
@@ -58,23 +73,57 @@ window.MobileUI = {
             if (e.key === 'Enter') this.handleAiQuery();
         };
 
+        // Search специализирован events
+        if (this.els.btnSearch) {
+            this.els.btnSearch.onclick = () => {
+                this.els.searchOverlay.classList.remove('hidden');
+                this.els.searchInput.focus();
+            };
+        }
+
+        if (this.els.btnCloseSearch) {
+            this.els.btnCloseSearch.onclick = () => this.els.searchOverlay.classList.add('hidden');
+        }
+
+        let debounce;
+        if (this.els.searchInput) {
+            this.els.searchInput.addEventListener('input', (e) => {
+                clearTimeout(debounce);
+                debounce = setTimeout(() => this.handleSearch(e.target.value), 300);
+            });
+        }
+
         // Close sheet on background click
-        this.els.tradeSheet.onclick = (e) => {
-            if (e.target === this.els.tradeSheet) this.els.tradeSheet.classList.add('hidden');
-        };
+        if (this.els.tradeSheet) {
+            this.els.tradeSheet.onclick = (e) => {
+                if (e.target === this.els.tradeSheet) this.els.tradeSheet.classList.add('hidden');
+            };
+        }
+
+        // Chart Interactions
+        if (this.els.chartStage) {
+            this.els.chartStage.addEventListener('touchmove', (e) => this.handleChartMove(e), { passive: false });
+            this.els.chartStage.addEventListener('mousemove', (e) => this.handleChartMove(e));
+            this.els.chartStage.addEventListener('touchend', () => this.els.chartCrosshair.classList.add('hidden'));
+            this.els.chartStage.addEventListener('mouseleave', () => this.els.chartCrosshair.classList.add('hidden'));
+        }
     },
 
-    startSync() {
-        this.sync();
-        setInterval(() => this.sync(), 1000);
+    updateMarketSentiment() {
+        // Placeholder for consistency across controllers
+    },
+
+    updateStockDisplay(sym, stock) {
+        if (STATE.currentStock?.symbol === sym) {
+            this.updateActiveStockUI(sym, stock);
+        }
     },
 
     sync() {
         if (typeof STATE === 'undefined') return;
 
-        this.updatePortfolioStats();
+        this.renderPortfolio();
         this.renderWatchlist();
-        this.renderHoldings();
         this.renderActivity();
 
         if (STATE.currentStock) {
@@ -91,28 +140,33 @@ window.MobileUI = {
         if (window.navigator.vibrate) window.navigator.vibrate(5);
     },
 
-    updatePortfolioStats() {
+    renderPortfolio() {
+        if (typeof STATE === 'undefined') return;
         let invested = 0;
         let current = 0;
         Object.keys(STATE.portfolio).forEach(sym => {
             const p = STATE.portfolio[sym];
             const live = STATE.stockData.get(sym) || { price: p.avgCost };
             invested += p.qty * p.avgCost;
-            current += p.qty * (live.displayPrice || live.price);
+            current += p.qty * (live.displayPrice || live.price || p.avgCost);
         });
 
         const total = current + STATE.balance;
         const pnl = total - 100000;
         const pnlPct = (pnl / 100000) * 100;
 
-        this.els.totalValue.innerText = `₹${total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-        this.els.portCash.innerText = `₹${(STATE.balance / 1000).toFixed(1)}K`;
+        if (this.els.totalValue) this.els.totalValue.innerText = `₹${total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+        if (this.els.portCash) this.els.portCash.innerText = `₹${(STATE.balance / 1000).toFixed(1)}K`;
 
-        this.els.portPnl.className = `m-pnl-pill ${pnl >= 0 ? 'up' : 'down'}`;
-        this.els.portPnl.innerHTML = `<i class="fa-solid fa-caret-${pnl >= 0 ? 'up' : 'down'}"></i><span>${pnl >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%</span>`;
+        if (this.els.portPnl) {
+            this.els.portPnl.className = `m-pnl-pill ${pnl >= 0 ? 'up' : 'down'}`;
+            this.els.portPnl.innerHTML = `<i class="fa-solid fa-caret-${pnl >= 0 ? 'up' : 'down'}"></i><span>${pnl >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%</span>`;
+        }
 
-        document.getElementById('m-total-invested').innerText = `₹${invested.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-        document.getElementById('m-port-unrealized').innerText = `₹${(current - invested).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+        if (this.els.totalInvested) this.els.totalInvested.innerText = `₹${invested.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+        if (this.els.portUnrealized) this.els.portUnrealized.innerText = `₹${(current - invested).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+
+        this.renderHoldings();
     },
 
     renderWatchlist() {
@@ -139,8 +193,39 @@ window.MobileUI = {
         });
     },
 
+    async handleSearch(q) {
+        if (!q || q.length < 2) {
+            this.els.searchResultList.innerHTML = '';
+            return;
+        }
+
+        const data = await searchAPI(q);
+        this.els.searchResultList.innerHTML = '';
+
+        data.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'm-search-item';
+            div.innerHTML = `
+                <div class="info">
+                    <span class="sym">${item.symbol}</span>
+                    <span class="name">${item.shortname}</span>
+                </div>
+                <div class="exch">${item.exchange}</div>
+            `;
+            div.onclick = () => {
+                this.selectStock(item.symbol);
+                this.els.searchOverlay.classList.add('hidden');
+                this.els.searchInput.value = '';
+                this.els.searchResultList.innerHTML = '';
+            };
+            this.els.searchResultList.appendChild(div);
+        });
+    },
+
     selectStock(sym) {
-        if (typeof DesktopUI !== 'undefined') DesktopUI.loadStock(sym);
+        if (typeof DesktopUI !== 'undefined') {
+            DesktopUI.loadStock(sym);
+        }
         this.switchView('m-view-analysis');
     },
 
@@ -179,7 +264,53 @@ window.MobileUI = {
         const isUp = history[history.length - 1].price >= history[0].price;
         const color = isUp ? '#22c55e' : '#ef4444';
         this.els.stockPath.setAttribute('stroke', color);
-        document.querySelector('#m-gradient-up stop:first-child').style.stopColor = color;
+
+        const gradStop = document.querySelector('#m-gradient-up stop:first-child');
+        if (gradStop) gradStop.style.stopColor = color;
+
+        // Render Time Labels
+        if (this.els.chartLabels) {
+            this.els.chartLabels.innerHTML = '';
+            const indices = [0, Math.floor(history.length / 2), history.length - 1];
+            indices.forEach(idx => {
+                const h = history[idx];
+                const time = new Date(h.time * 1000);
+                const label = document.createElement('span');
+                label.innerText = time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                this.els.chartLabels.appendChild(label);
+            });
+        }
+
+        STATE.activeMobileChartData = history;
+    },
+
+    handleChartMove(e) {
+        if (!STATE.activeMobileChartData) return;
+        const rect = this.els.chartStage.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const x = clientX - rect.left;
+        const width = rect.width;
+
+        if (x < 0 || x > width) {
+            this.els.chartCrosshair.classList.add('hidden');
+            return;
+        }
+
+        const idx = Math.min(
+            STATE.activeMobileChartData.length - 1,
+            Math.max(0, Math.floor((x / width) * STATE.activeMobileChartData.length))
+        );
+
+        const point = STATE.activeMobileChartData[idx];
+        this.els.chartCrosshair.classList.remove('hidden');
+        this.els.chartCrosshair.style.left = `${x}px`;
+
+        // Update Price Display Temporarily
+        if (point) {
+            this.els.mainPrice.innerText = `₹${point.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        }
+
+        if (e.cancelable) e.preventDefault();
     },
 
     openTradeSheet(action) {
@@ -208,14 +339,51 @@ window.MobileUI = {
 
     executeTrade() {
         const action = STATE.pendingTradeAction;
-        if (typeof DesktopUI !== 'undefined') {
-            DesktopUI.handleTransaction(action);
+        const symbol = STATE.currentStock.symbol;
+        const qty = parseInt(this.els.tradeQty.value) || 0;
+        const price = STATE.currentStock.displayPrice;
+
+        if (qty <= 0) return;
+
+        // Standalone Mobile Transaction Logic
+        const taxData = TaxEngine.calculate(action, price, qty);
+        const total = price * qty + (action === 'BUY' ? taxData.total : -taxData.total);
+
+        if (action === 'BUY') {
+            if (STATE.balance < total) {
+                this.showToast("Insufficient Balance");
+                return;
+            }
+            STATE.balance -= total;
+            const p = STATE.portfolio[symbol] || { qty: 0, avgCost: 0 };
+            const newQty = p.qty + qty;
+            const newAvg = (p.qty * p.avgCost + qty * price) / newQty;
+            STATE.portfolio[symbol] = { qty: newQty, avgCost: newAvg };
         } else {
-            // Log fallback if DesktopUI missing but STATE exists
-            console.log("Order executed locally", action);
+            const p = STATE.portfolio[symbol];
+            if (!p || p.qty < qty) {
+                this.showToast("Insufficient Holdings");
+                return;
+            }
+            STATE.balance += total;
+            p.qty -= qty;
+            if (p.qty <= 0) delete STATE.portfolio[symbol];
         }
-        this.showToast(`${action} Order Executed`);
+
+        // Record Trade
+        STATE.trades.push({
+            id: Date.now(),
+            symbol,
+            action,
+            qty,
+            price,
+            tax: taxData.total,
+            time: new Date().toISOString()
+        });
+
+        this.showToast(`${action} Successful: ${symbol}`);
         this.els.tradeSheet.classList.add('hidden');
+        this.sync();
     },
 
     renderHoldings() {

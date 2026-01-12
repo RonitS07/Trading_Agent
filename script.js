@@ -105,8 +105,8 @@ class LiveTicker {
         this.sync();
     }
 
-    async sync() {
-        const symbols = Array.from(this.activeSymbols);
+    async sync(targetSym = null) {
+        const symbols = targetSym ? [targetSym] : Array.from(this.activeSymbols);
         for (const sym of symbols) {
             const data = await getQuote(sym);
             if (data && data.price !== undefined && !isNaN(data.price)) {
@@ -121,11 +121,19 @@ class LiveTicker {
                 }
             }
         }
+
+        // Push updates to active UI
         DesktopUI.renderWatchlist();
-        MobileUI.renderWatchlist();
+        if (window.MobileUI) MobileUI.renderWatchlist();
         DesktopUI.renderPortfolio();
-        MobileUI.renderPortfolio();
+        if (window.MobileUI) MobileUI.renderPortfolio();
         DesktopUI.updateGlobalAI();
+
+        // If a specific stock was synced, ensure UI reflects it immediately
+        if (targetSym && STATE.currentStock?.symbol === targetSym) {
+            DesktopUI.updateStockDisplay(targetSym, STATE.currentStock, false);
+            if (window.MobileUI) MobileUI.updateStockDisplay(targetSym, STATE.currentStock, false);
+        }
     }
 
     tick() {
@@ -140,10 +148,11 @@ class LiveTicker {
             stock.displayPrice += change;
 
             DesktopUI.updateStockDisplay(sym, stock, change > 0);
-            MobileUI.updateStockDisplay(sym, stock, change > 0);
+            if (window.MobileUI) MobileUI.updateStockDisplay(sym, stock, change > 0);
+
             if (STATE.currentStock?.symbol === sym) {
                 DesktopUI.updateMarketSentiment();
-                MobileUI.updateMarketSentiment();
+                if (window.MobileUI) MobileUI.updateMarketSentiment();
             }
         });
 
@@ -152,12 +161,13 @@ class LiveTicker {
         if (STATE.activeTab === 'tab-analysis' && STATE.currentStock) DesktopUI.updateTradePreview();
 
         // Mobile updates
-        MobileUI.updateTradePreview();
+        if (window.MobileUI) MobileUI.updateTradePreview();
     }
 
     track(sym) {
+        if (this.activeSymbols.has(sym)) return;
         this.activeSymbols.add(sym);
-        this.sync();
+        this.sync(sym);
     }
 }
 
@@ -408,6 +418,7 @@ const DesktopUI = {
     pendingTrade: null,
 
     init() {
+        if (!document.getElementById('desktop-app')) return;
         Ticker.start();
         this.bindEvents();
         this.updateMarketStatus();
@@ -427,10 +438,12 @@ const DesktopUI = {
 
         // Search
         let debounce;
-        this.els.omnibar.addEventListener('input', (e) => {
-            clearTimeout(debounce);
-            debounce = setTimeout(() => this.handleSearch(e.target.value), 300);
-        });
+        if (this.els.omnibar) {
+            this.els.omnibar.addEventListener('input', (e) => {
+                clearTimeout(debounce);
+                debounce = setTimeout(() => this.handleSearch(e.target.value), 300);
+            });
+        }
 
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.search-box')) this.els.searchResults.classList.add('hidden');
@@ -601,6 +614,9 @@ const DesktopUI = {
         this.updateTradePreview();
         this.fetchStockHistory(symbol, STATE.chartRange);
         this.closeTradePlanner();
+
+        // Refresh ticker for this specific stock immediately
+        Ticker.sync(symbol);
     },
 
     async fetchStockHistory(symbol, range = '1d') {
@@ -787,6 +803,7 @@ const DesktopUI = {
     },
 
     updateStockDisplay(symbol, stock, isUpTick = null) {
+        if (!this.els.mainPrice) return;
         if (STATE.currentStock?.symbol === symbol) {
             this.els.mainSymbol.innerText = symbol;
             this.els.mainName.innerText = "NSE/BSE Listed Equity";
@@ -967,11 +984,8 @@ const DesktopUI = {
     },
 
     renderPortfolio() {
+        if (!this.els.holdingsCont) return;
         let invested = 0;
-        let costBasisArray = []; // For P&L calc
-        let costBasis = 0;
-
-        this.els.holdingsCont.innerHTML = '';
         Object.keys(STATE.portfolio).forEach(sym => {
             const p = STATE.portfolio[sym];
             const currentPrice = STATE.stockData.get(sym)?.displayPrice || p.avgCost || 0;
@@ -1011,6 +1025,7 @@ const DesktopUI = {
     },
 
     renderWatchlist() {
+        if (!this.els.watchlistCont) return;
         this.els.watchlistCont.innerHTML = '';
         STATE.watchlist.forEach(sym => {
             const stock = STATE.stockData.get(sym);
@@ -1030,6 +1045,7 @@ const DesktopUI = {
     },
 
     renderActivity() {
+        if (!this.els.activityLog) return;
         this.els.activityLog.innerHTML = '';
         [...STATE.trades].reverse().slice(0, 5).forEach(trade => {
             const div = document.createElement('div');
@@ -1043,6 +1059,7 @@ const DesktopUI = {
     },
 
     updateGlobalAI() {
+        if (!this.els.marketAiBox) return;
         if (STATE.activeTab === 'tab-overview') {
             this.els.marketAiBox.innerHTML = ActionPlanner.generateMarketAdvice();
         }
@@ -1098,9 +1115,10 @@ const DesktopUI = {
     }
 };
 
-// MobileUI removed from script.js
-
+// --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
+    // script.js handles shared state and Desktop UI initialization
+    // Mobile UI is handled separately in mobile_script.js
     DesktopUI.init();
 });
 

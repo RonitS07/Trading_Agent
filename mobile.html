@@ -71,22 +71,24 @@
                     </div>
                 </div>
 
-                <!-- AI Quick Insights -->
-                <div class="m-section-header">
-                    <h3>MARKET PULSE</h3>
-                    <a href="#" class="m-link">AI ANALYSIS</a>
-                </div>
-                <div id="m-insight-chips" class="m-chip-row">
-                    <!-- Dynamic Insight Chips -->
-                </div>
-
-                <!-- Watchlist -->
+                <!-- Watchlist (Promoted) -->
                 <div class="m-section-header">
                     <h3>WATCHLIST</h3>
-                    <button class="m-btn-text">EDIT</button>
+                    <div class="m-header-actions">
+                        <button class="m-btn-text">EDIT</button>
+                    </div>
                 </div>
                 <div id="m-watchlist" class="m-scroll-list">
                     <!-- Watchlist items go here -->
+                </div>
+
+                <!-- AI Quick Insights -->
+                <div class="m-section-header">
+                    <h3>MARKET PULSE</h3>
+                    <a href="#" class="m-link" onclick="MobileUI.switchView('m-view-ai')">AI RESEARCH</a>
+                </div>
+                <div id="m-insight-chips" class="m-chip-row">
+                    <!-- Dynamic Insight Chips -->
                 </div>
             </section>
 
@@ -101,20 +103,24 @@
                         </div>
                     </div>
 
-                    <div class="m-chart-stage">
-                        <div class="m-chart-overlay">
-                            <span id="m-chart-label">LIVE TRACK</span>
+                    <div class="m-chart-container">
+                        <div class="m-chart-stage">
+                            <div id="m-chart-crosshair" class="m-crosshair hidden"></div>
+                            <svg id="m-stock-svg" viewBox="0 0 400 180" preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id="m-gradient-up" x1="0%" y1="0%" x2="0%" y2="100%">
+                                        <stop offset="0%" style="stop-color:var(--neon-green);stop-opacity:0.4" />
+                                        <stop offset="100%" style="stop-color:var(--neon-green);stop-opacity:0" />
+                                    </linearGradient>
+                                </defs>
+                                <path id="m-stock-path" d="" fill="none" stroke="var(--neon-green)"
+                                    stroke-width="2.5" />
+                                <path id="m-stock-area" d="" fill="url(#m-gradient-up)" opacity="0.3" />
+                            </svg>
                         </div>
-                        <svg id="m-stock-svg" viewBox="0 0 400 180" preserveAspectRatio="none">
-                            <defs>
-                                <linearGradient id="m-gradient-up" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" style="stop-color:var(--neon-green);stop-opacity:0.4" />
-                                    <stop offset="100%" style="stop-color:var(--neon-green);stop-opacity:0" />
-                                </linearGradient>
-                            </defs>
-                            <path id="m-stock-path" d="" fill="none" stroke="var(--neon-green)" stroke-width="2.5" />
-                            <path id="m-stock-area" d="" fill="url(#m-gradient-up)" opacity="0.3" />
-                        </svg>
+                        <div id="m-chart-labels" class="m-chart-labels">
+                            <!-- Dynamic Time Labels -->
+                        </div>
                     </div>
 
                     <div class="m-stats-grid">
@@ -145,19 +151,26 @@
 
             <!-- AI PLANNER VIEW -->
             <section id="m-view-ai" class="m-view">
-                <div class="m-ai-chat-container">
+                <div class="m-ai-chat-full">
                     <div class="m-ai-header">
-                        <i class="fa-solid fa-robot"></i>
-                        <span>AI STRATEGIST</span>
+                        <div class="m-ai-robot">
+                            <i class="fa-solid fa-robot"></i>
+                            <div class="m-online-pulse"></div>
+                        </div>
+                        <div class="m-ai-info">
+                            <strong>AI STRATEGIST</strong>
+                            <span>Real-time Market Technicals</span>
+                        </div>
                     </div>
-                    <div id="m-chat-history" class="m-chat-box">
-                        <!-- Messages -->
-                        <div class="chat-msg ai">How can I optimize your portfolio today? I recommend checking RELIANCE
-                            support zones.</div>
+                    <div id="m-chat-history" class="m-chat-main">
+                        <div class="chat-msg ai">I am monitoring NSE/BSE trends. Ask me about any stock or suggest a
+                            strategy.</div>
                     </div>
-                    <div class="m-chat-input-area">
-                        <input type="text" id="m-plan-input" placeholder="Ask about stocks, strategy...">
-                        <button id="m-btn-send-ai"><i class="fa-solid fa-paper-plane"></i></button>
+                    <div class="m-chat-input-wrapper">
+                        <div class="m-chat-input-pill">
+                            <input type="text" id="m-plan-input" placeholder="Predict RELIANCE target...">
+                            <button id="m-btn-send-ai"><i class="fa-solid fa-paper-plane"></i></button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -226,6 +239,22 @@
                         </div>
                         <button id="m-btn-confirm-trade" class="m-execute-btn">EXECUTE ORDER</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Search Overlay -->
+        <div id="m-search-overlay" class="m-overlay hidden">
+            <div class="m-search-container">
+                <div class="m-search-header">
+                    <div class="m-search-input-group">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="m-search-input" placeholder="Search NSE/BSE stocks...">
+                    </div>
+                    <button id="m-btn-close-search-overlay" class="m-close-btn">CANCEL</button>
+                </div>
+                <div id="m-search-results" class="m-search-results-list">
+                    <!-- Search results dynamically added here -->
                 </div>
             </div>
         </div>
