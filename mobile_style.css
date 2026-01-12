@@ -122,16 +122,23 @@ body.mobile-app-theme {
 #m-main-content {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 20px;
+    padding-bottom: 100px;
+    /* Extra space to prevent navbar overlap */
+    -webkit-overflow-scrolling: touch;
 }
 
 .m-view {
     display: none;
     animation: fadeIn 0.3s ease-out;
+    min-height: calc(100vh - 200px);
+    /* Ensure enough height for scrollable content */
 }
 
 .m-view.active {
-    display: block;
+    display: flex;
+    flex-direction: column;
 }
 
 @keyframes fadeIn {
@@ -498,6 +505,10 @@ body.mobile-app-theme {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
+    margin-top: auto;
+    /* Push to bottom of card */
+    padding-bottom: 20px;
+    /* Space above navbar */
 }
 
 .m-trade-btn {
@@ -575,10 +586,14 @@ body.mobile-app-theme {
 
 /* Full AI Chat Overhaul */
 .m-ai-chat-full {
-    height: calc(100vh - 150px);
+    height: auto;
+    min-height: calc(100vh - 280px);
+    /* Account for top bar and navbar */
     display: flex;
     flex-direction: column;
     padding: 10px 0;
+    padding-bottom: 60px;
+    /* Space for navbar */
 }
 
 .m-ai-header {
@@ -697,8 +712,12 @@ body.mobile-app-theme {
 }
 
 .m-chat-input-wrapper {
-    padding: 20px;
-    background: linear-gradient(to top, var(--deep-black), transparent);
+    padding: 15px 20px;
+    padding-bottom: calc(20px + 80px);
+    /* Account for navbar height */
+    background: linear-gradient(to top, var(--deep-black) 50%, transparent);
+    position: sticky;
+    bottom: 0;
 }
 
 .m-chat-input-pill {
@@ -772,12 +791,16 @@ body.mobile-app-theme {
 .m-search-header {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     margin-bottom: 24px;
     padding-top: env(safe-area-inset-top, 10px);
+    flex-shrink: 0;
 }
 
 .m-search-input-group {
+    flex: 1;
+    min-width: 0;
+    /* Allow shrinking */
     flex: 1;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--border-glass);
@@ -804,13 +827,17 @@ body.mobile-app-theme {
     outline: none;
 }
 
+.m-close-btn,
 .m-btn-close-search-overlay {
     background: none;
     border: none;
-    color: var(--text-muted);
-    font-size: 0.75rem;
+    color: var(--neon-blue);
+    font-size: 0.8rem;
     font-weight: 800;
     letter-spacing: 0.5px;
+    padding: 8px 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .m-search-results-list {
