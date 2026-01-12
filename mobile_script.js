@@ -262,12 +262,33 @@ window.MobileUI = {
         document.getElementById('m-day-high').innerText = `₹${(stock.high || stock.price * 1.02).toFixed(2)}`;
         document.getElementById('m-day-low').innerText = `₹${(stock.low || stock.price * 0.98).toFixed(2)}`;
 
+        // Update watchlist button state
+        this.updateWatchlistButton();
+
         this.renderChart(sym);
     },
 
     renderChart(sym) {
+        const svgPath = this.els.stockPath;
+        const svgArea = this.els.stockArea;
+
+        if (!svgPath || !svgArea) return;
+
         const history = STATE.stockHistory.get(sym)?.[STATE.chartRange];
-        if (!history || history.length < 5) return;
+
+        // Show loading state or empty state
+        if (!history || history.length < 2) {
+            // Draw a flat line as placeholder
+            svgPath.setAttribute('d', 'M 0,90 L 400,90');
+            svgArea.setAttribute('d', 'M 0,90 L 400,90 L 400,180 L 0,180 Z');
+            svgPath.setAttribute('stroke', '#334155');
+            svgArea.setAttribute('fill', 'rgba(51, 65, 85, 0.1)');
+
+            if (this.els.chartLabels) {
+                this.els.chartLabels.innerHTML = '<span style="opacity:0.5;">Loading chart...</span>';
+            }
+            return;
+        }
 
         const prices = history.map(h => h.price);
         const min = Math.min(...prices);
@@ -281,12 +302,12 @@ window.MobileUI = {
         });
 
         const d = `M ${points.join(' L ')}`;
-        this.els.stockPath.setAttribute('d', d);
-        this.els.stockArea.setAttribute('d', `${d} L 400,180 L 0,180 Z`);
+        svgPath.setAttribute('d', d);
+        svgArea.setAttribute('d', `${d} L 400,180 L 0,180 Z`);
 
         const isUp = history[history.length - 1].price >= history[0].price;
         const color = isUp ? '#22c55e' : '#ef4444';
-        this.els.stockPath.setAttribute('stroke', color);
+        svgPath.setAttribute('stroke', color);
 
         const gradStop = document.querySelector('#m-gradient-up stop:first-child');
         if (gradStop) gradStop.style.stopColor = color;
@@ -297,10 +318,12 @@ window.MobileUI = {
             const indices = [0, Math.floor(history.length / 2), history.length - 1];
             indices.forEach(idx => {
                 const h = history[idx];
-                const time = new Date(h.time * 1000);
-                const label = document.createElement('span');
-                label.innerText = time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                this.els.chartLabels.appendChild(label);
+                if (h && h.time) {
+                    const time = new Date(h.time * 1000);
+                    const label = document.createElement('span');
+                    label.innerText = time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                    this.els.chartLabels.appendChild(label);
+                }
             });
         }
 

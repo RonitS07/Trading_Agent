@@ -10,6 +10,13 @@
     --neon-amber: #f59e0b;
     --glass-blur: blur(16px);
     --safe-bottom: env(safe-area-inset-bottom);
+
+    /* Z-Index Hierarchy */
+    --z-base: 1;
+    --z-navbar: 100;
+    --z-sheet: 500;
+    --z-modal: 1000;
+    --z-toast: 2000;
 }
 
 * {
@@ -51,9 +58,12 @@ body.mobile-app-theme {
     background-color: var(--deep-black);
     color: var(--text-white);
     font-family: 'Outfit', sans-serif;
-    height: 100vh;
+    height: 100dvh;
+    /* Dynamic viewport height for mobile */
     width: 100vw;
-    overflow: hidden;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll */
+    overflow-y: auto;
     position: fixed;
     display: flex;
     flex-direction: column;
@@ -71,6 +81,8 @@ body.mobile-app-theme {
     flex-direction: column;
     position: relative;
     padding-bottom: calc(70px + var(--safe-bottom));
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* Top Bar */
@@ -82,7 +94,9 @@ body.mobile-app-theme {
     padding: 0 20px;
     background: rgba(8, 10, 13, 0.9);
     backdrop-filter: var(--glass-blur);
-    z-index: 100;
+    z-index: var(--z-navbar);
+    position: sticky;
+    top: 0;
 }
 
 .m-profile-pill {
@@ -393,7 +407,7 @@ body.mobile-app-theme {
     align-items: center;
     padding-bottom: var(--safe-bottom);
     border-top: 1px solid var(--border-glass);
-    z-index: 500;
+    z-index: var(--z-navbar);
 }
 
 .m-nav-btn {
@@ -491,7 +505,7 @@ body.mobile-app-theme {
     width: 1px;
     background: rgba(14, 165, 233, 0.4);
     pointer-events: none;
-    z-index: 5;
+    z-index: var(--z-base);
 }
 
 .m-chart-labels {
@@ -564,7 +578,7 @@ body.mobile-app-theme {
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
-    z-index: 1000;
+    z-index: var(--z-modal);
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -766,6 +780,9 @@ body.mobile-app-theme {
     outline: none;
     font-size: 1rem;
     height: 48px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 #m-btn-send-ai {
@@ -798,7 +815,7 @@ body.mobile-app-theme {
     border-radius: 16px;
     text-align: center;
     font-weight: 700;
-    z-index: 2000;
+    z-index: var(--z-toast);
     animation: fadeIn 0.3s;
 }
 
@@ -853,6 +870,9 @@ body.mobile-app-theme {
     font-size: 1rem;
     font-family: 'Outfit', sans-serif;
     outline: none;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .m-close-btn,
@@ -915,6 +935,7 @@ body.mobile-app-theme {
     border-radius: 4px;
     color: var(--neon-blue);
 }
+
 /* PIN Verification Modal */
 .m-pin-container {
     background: linear-gradient(165deg, rgba(20, 26, 35, 0.95), rgba(10, 15, 22, 0.98));
