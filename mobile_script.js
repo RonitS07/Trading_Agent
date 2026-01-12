@@ -149,25 +149,37 @@ window.MobileUI = {
 
     renderPortfolio() {
         if (typeof STATE === 'undefined') return;
+
+        const safeBalance = this.safeFloat(STATE.balance);
+
         let invested = 0;
         let current = 0;
+
         Object.keys(STATE.portfolio).forEach(sym => {
             const p = STATE.portfolio[sym];
             const live = STATE.stockData.get(sym) || { price: p.avgCost };
-            invested += p.qty * p.avgCost;
-            current += p.qty * (live.displayPrice || live.price || p.avgCost);
+            const livePrice = this.safeFloat(live.displayPrice) || this.safeFloat(live.price) || this.safeFloat(p.avgCost);
+
+            const qty = this.safeFloat(p.qty);
+            const avg = this.safeFloat(p.avgCost);
+
+            invested += qty * avg;
+            current += qty * livePrice;
         });
 
-        const total = current + STATE.balance;
-        const pnl = total - 100000;
+        const total = current + safeBalance;
+        const pnl = total - 100000; // Initial capital hardcoded for safe reference
         const pnlPct = (pnl / 100000) * 100;
 
+        // Render with safe formatters
         if (this.els.totalValue) this.els.totalValue.innerText = `₹${total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-        if (this.els.portCash) this.els.portCash.innerText = `₹${(STATE.balance / 1000).toFixed(1)}K`;
+        if (this.els.portCash) this.els.portCash.innerText = `₹${(safeBalance / 1000).toFixed(1)}K`;
 
         if (this.els.portPnl) {
-            this.els.portPnl.className = `m-pnl-pill ${pnl >= 0 ? 'up' : 'down'}`;
-            this.els.portPnl.innerHTML = `<i class="fa-solid fa-caret-${pnl >= 0 ? 'up' : 'down'}"></i><span>${pnl >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%</span>`;
+            const isUp = pnl >= 0;
+            const safePnlPct = isFinite(pnlPct) ? pnlPct : 0;
+            this.els.portPnl.className = `m-pnl-pill ${isUp ? 'up' : 'down'}`;
+            this.els.portPnl.innerHTML = `<i class="fa-solid fa-caret-${isUp ? 'up' : 'down'}"></i><span>${isUp ? '+' : ''}${safePnlPct.toFixed(2)}%</span>`;
         }
 
         if (this.els.totalInvested) this.els.totalInvested.innerText = `₹${invested.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
@@ -182,6 +194,9 @@ window.MobileUI = {
             const s = STATE.stockData.get(sym);
             if (!s) return;
 
+            // Safe Price Check
+            const safePrice = this.safeFloat(s.displayPrice) || this.safeFloat(s.price);
+
             const div = document.createElement('div');
             div.className = `m-w-item ${STATE.currentStock?.symbol === sym ? 'active' : ''}`;
             div.onclick = () => this.selectStock(sym);
@@ -192,7 +207,7 @@ window.MobileUI = {
                     <span class="m-w-name">INDIA NSE</span>
                 </div>
                 <div class="m-w-right">
-                    <span class="m-w-price">₹${s.displayPrice.toFixed(2)}</span>
+                    <span class="m-w-price">${this.formatCurrency(safePrice)}</span>
                     <span class="m-w-change ${s.changePct >= 0 ? 'up' : 'down'}">${s.changePct >= 0 ? '+' : ''}${s.changePct.toFixed(2)}%</span>
                 </div>
             `;
@@ -234,100 +249,133 @@ window.MobileUI = {
         const quote = await getQuote(sym);
         if (!quote) return;
 
+        // RACE CONDITION CHECK: Ensure user hasn't switched symbols while waiting
+        // If we want this to be the source of truth, we set it. 
+        // But if another click happened, we might want to respect the latest. 
+        // For simplicity, we just proceed but ensure consistency.
         STATE.currentStock = quote;
         STATE.stockData.set(sym, quote);
 
+        // Update UI immediately with Quote data
+        this.updateActiveStockUI(sym, quote);
+        this.switchView('m-view-analysis');
+
         // Fetch history
         const hist = await getHistory(sym, STATE.chartRange);
+
+        // RACE CONDITION CHECK: Only update chart if this is still the active symbol
+        if (STATE.currentStock.symbol !== sym) return;
+
         if (hist) {
             if (!STATE.stockHistory.has(sym)) STATE.stockHistory.set(sym, {});
             STATE.stockHistory.get(sym)[STATE.chartRange] = hist;
+            this.renderChart(sym);
         }
-
-        // Track with ticker
-        Ticker.track(sym);
-
-        // Update UI
-        this.updateActiveStockUI(sym, quote);
-        this.switchView('m-view-analysis');
     },
 
     updateActiveStockUI(sym, stock) {
-        this.els.mainSymbol.innerText = sym;
-        this.els.mainPrice.innerText = `₹${stock.displayPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-        this.els.mainChange.innerText = `${stock.changePct >= 0 ? '+' : ''}${stock.changePct.toFixed(2)}%`;
-        this.els.mainChange.className = stock.changePct >= 0 ? 'up' : 'down';
+        if (!stock) return;
 
-        // Update Stats
-        document.getElementById('m-day-high').innerText = `₹${(stock.high || stock.price * 1.02).toFixed(2)}`;
-        document.getElementById('m-day-low').innerText = `₹${(stock.low || stock.price * 0.98).toFixed(2)}`;
+        this.els.mainSymbol.innerText = sym;
+        const price = this.safeFloat(stock.displayPrice) || this.safeFloat(stock.price);
+        this.els.mainPrice.innerText = this.formatCurrency(price);
+
+        const change = this.safeFloat(stock.changePct);
+        this.els.mainChange.innerText = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+        this.els.mainChange.className = change >= 0 ? 'up' : 'down';
+
+        // Update Stats - NO FAKE DATA
+        // Use placeholders if 0 or missing
+        const high = this.safeFloat(stock.high);
+        const low = this.safeFloat(stock.low);
+
+        document.getElementById('m-day-high').innerText = high > 0 ? this.formatCurrency(high) : "—";
+        document.getElementById('m-day-low').innerText = low > 0 ? this.formatCurrency(low) : "—";
+
+        const volume = this.safeFloat(stock.volume);
+        const volEl = document.getElementById('m-volume');
+        if (volEl) {
+            volEl.innerText = volume > 0 ? `${(volume / 1000000).toFixed(1)}M` : "—";
+        }
 
         // Update watchlist button state
         this.updateWatchlistButton();
 
-        this.renderChart(sym);
+        // Initial chart render (will likely be empty/loading until history arrives)
+        // Check if we already have history to avoid flickering
+        if (STATE.stockHistory.has(sym)) {
+            this.renderChart(sym);
+        }
     },
 
     renderChart(sym) {
-        const svgPath = this.els.stockPath;
-        const svgArea = this.els.stockArea;
+        try {
+            const svgPath = this.els.stockPath;
+            const svgArea = this.els.stockArea;
 
-        if (!svgPath || !svgArea) return;
+            if (!svgPath || !svgArea) return;
 
-        const history = STATE.stockHistory.get(sym)?.[STATE.chartRange];
+            const history = STATE.stockHistory.get(sym)?.[STATE.chartRange];
 
-        // Show loading state or empty state
-        if (!history || history.length < 2) {
-            // Draw a flat line as placeholder
-            svgPath.setAttribute('d', 'M 0,90 L 400,90');
-            svgArea.setAttribute('d', 'M 0,90 L 400,90 L 400,180 L 0,180 Z');
-            svgPath.setAttribute('stroke', '#334155');
-            svgArea.setAttribute('fill', 'rgba(51, 65, 85, 0.1)');
+            // Show loading state or empty state
+            if (!history || history.length < 2) {
+                // Draw a flat line as placeholder
+                svgPath.setAttribute('d', 'M 0,90 L 400,90');
+                svgArea.setAttribute('d', 'M 0,90 L 400,90 L 400,180 L 0,180 Z');
+                svgPath.setAttribute('stroke', '#334155');
+                svgArea.setAttribute('fill', 'rgba(51, 65, 85, 0.1)');
 
-            if (this.els.chartLabels) {
-                this.els.chartLabels.innerHTML = '<span style="opacity:0.5;">Loading chart...</span>';
-            }
-            return;
-        }
-
-        const prices = history.map(h => h.price);
-        const min = Math.min(...prices);
-        const max = Math.max(...prices);
-        const range = (max - min) || 1;
-
-        const points = history.map((h, i) => {
-            const x = (i / (history.length - 1)) * 400;
-            const y = 180 - ((h.price - min) / range) * 140 - 20;
-            return `${x},${y}`;
-        });
-
-        const d = `M ${points.join(' L ')}`;
-        svgPath.setAttribute('d', d);
-        svgArea.setAttribute('d', `${d} L 400,180 L 0,180 Z`);
-
-        const isUp = history[history.length - 1].price >= history[0].price;
-        const color = isUp ? '#22c55e' : '#ef4444';
-        svgPath.setAttribute('stroke', color);
-
-        const gradStop = document.querySelector('#m-gradient-up stop:first-child');
-        if (gradStop) gradStop.style.stopColor = color;
-
-        // Render Time Labels
-        if (this.els.chartLabels) {
-            this.els.chartLabels.innerHTML = '';
-            const indices = [0, Math.floor(history.length / 2), history.length - 1];
-            indices.forEach(idx => {
-                const h = history[idx];
-                if (h && h.time) {
-                    const time = new Date(h.time * 1000);
-                    const label = document.createElement('span');
-                    label.innerText = time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                    this.els.chartLabels.appendChild(label);
+                if (this.els.chartLabels) {
+                    this.els.chartLabels.innerHTML = '<span style="opacity:0.5;">Loading chart...</span>';
                 }
-            });
-        }
+                return;
+            }
 
-        STATE.activeMobileChartData = history;
+            const prices = history.map(h => h.price);
+            const min = Math.min(...prices);
+            const max = Math.max(...prices);
+            const range = (max - min) || 1;
+
+            const points = history.map((h, i) => {
+                const x = (i / (history.length - 1)) * 400;
+                const y = 180 - ((h.price - min) / range) * 140 - 20;
+                return `${x},${y}`;
+            });
+
+            const d = `M ${points.join(' L ')}`;
+            svgPath.setAttribute('d', d);
+            svgArea.setAttribute('d', `${d} L 400,180 L 0,180 Z`);
+
+            const isUp = history[history.length - 1].price >= history[0].price;
+            const color = isUp ? '#22c55e' : '#ef4444';
+            svgPath.setAttribute('stroke', color);
+
+            const gradStop = document.querySelector('#m-gradient-up stop:first-child');
+            if (gradStop) gradStop.style.stopColor = color;
+
+            // Render Time Labels
+            if (this.els.chartLabels) {
+                this.els.chartLabels.innerHTML = '';
+                const indices = [0, Math.floor(history.length / 2), history.length - 1];
+                indices.forEach(idx => {
+                    const h = history[idx];
+                    if (h && h.time) {
+                        const time = new Date(h.time * 1000);
+                        const label = document.createElement('span');
+                        label.innerText = time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                        this.els.chartLabels.appendChild(label);
+                    }
+                });
+            }
+
+            STATE.activeMobileChartData = history;
+
+        } catch (e) {
+            console.error("Chart Render Error:", e);
+            if (this.els.chartLabels) {
+                this.els.chartLabels.innerHTML = '<span style="color:var(--neon-red)">Chart Error</span>';
+            }
+        }
     },
 
     handleChartMove(e) {
@@ -374,13 +422,36 @@ window.MobileUI = {
     },
 
     updateTradePreview() {
-        const qty = parseInt(this.els.tradeQty.value) || 0;
-        const price = STATE.currentStock.displayPrice;
+        if (!STATE.currentStock) return;
+
+        const rawQty = parseInt(this.els.tradeQty.value);
+        const qty = isNaN(rawQty) || rawQty < 1 ? 0 : rawQty;
+
+        const price = this.safeFloat(STATE.currentStock.displayPrice) || this.safeFloat(STATE.currentStock.price) || 0;
+
+        if (price <= 0) {
+            this.els.previewPrice.innerText = "—";
+            this.els.tradeTotal.innerText = "—";
+            return;
+        }
+
         const tax = TaxEngine.calculate(STATE.pendingTradeAction, price, qty).total;
         const total = price * qty + (STATE.pendingTradeAction === 'BUY' ? tax : -tax);
 
-        this.els.previewPrice.innerText = `₹${price.toFixed(2)}`;
-        this.els.tradeTotal.innerText = `₹${total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        // Update UI with safe values
+        this.els.previewPrice.innerText = this.formatCurrency(price);
+        this.els.tradeTotal.innerText = this.formatCurrency(total);
+    },
+
+    // Global Safety Helpers
+    safeFloat(val) {
+        const num = parseFloat(val);
+        return isFinite(num) ? num : 0;
+    },
+
+    formatCurrency(val) {
+        if (!isFinite(val) || isNaN(val)) return "—";
+        return `₹${val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     },
 
     executeTrade() {
@@ -438,8 +509,15 @@ window.MobileUI = {
         if (qty <= 0) return;
 
         // Standalone Mobile Transaction Logic
-        const taxData = TaxEngine.calculate(action, price, qty);
-        const total = price * qty + (action === 'BUY' ? taxData.total : -taxData.total);
+        const safePrice = this.safeFloat(price);
+        const taxData = TaxEngine.calculate(action, safePrice, qty);
+
+        // Ensure total is valid
+        const total = safePrice * qty + (action === 'BUY' ? taxData.total : -taxData.total);
+        if (!isFinite(total) || total <= 0) {
+            this.showToast("Transaction Error: Invalid Value");
+            return;
+        }
 
         if (action === 'BUY') {
             if (STATE.balance < total) {
@@ -449,7 +527,12 @@ window.MobileUI = {
             STATE.balance -= total;
             const p = STATE.portfolio[symbol] || { qty: 0, avgCost: 0 };
             const newQty = p.qty + qty;
-            const newAvg = (p.qty * p.avgCost + qty * price) / newQty;
+
+            // Calculate new average cost safely
+            const currentTotalCost = p.qty * p.avgCost;
+            const additionalCost = qty * safePrice;
+            const newAvg = (currentTotalCost + additionalCost) / newQty;
+
             STATE.portfolio[symbol] = { qty: newQty, avgCost: newAvg };
         } else {
             const p = STATE.portfolio[symbol];
@@ -503,18 +586,22 @@ window.MobileUI = {
     },
 
     renderActivity() {
+        if (typeof STATE === 'undefined') return;
         this.els.activityLog.innerHTML = '';
-        [...STATE.trades].reverse().slice(0, 10).forEach(trade => {
+        STATE.trades.slice().reverse().forEach(t => {
             const div = document.createElement('div');
-            div.className = 'm-w-item';
-            div.style.padding = '12px 16px';
+            div.className = 'm-log-item';
+
+            const safeTotal = this.safeFloat(t.total);
+            const formattedTotal = this.formatCurrency(safeTotal);
+
             div.innerHTML = `
-                <div class="m-w-left">
-                    <span class="m-w-sym" style="font-size:0.85rem">${trade.action} ${trade.symbol}</span>
-                    <span class="m-w-name">${new Date(trade.time).toLocaleTimeString()}</span>
+                <div class="m-log-left">
+                    <span class="m-log-action ${t.action === 'BUY' ? 'up' : 'down'}">${t.action} ${t.symbol}</span>
+                    <span class="m-log-time">${new Date(t.time).toLocaleTimeString()}</span>
                 </div>
-                <div class="m-w-right">
-                    <span class="m-w-price" style="font-size:0.85rem">₹${(trade.price * trade.qty).toLocaleString('en-IN')}</span>
+                <div class="m-log-right">
+                    <span class="m-log-price">${formattedTotal}</span>
                 </div>
             `;
             this.els.activityLog.appendChild(div);
