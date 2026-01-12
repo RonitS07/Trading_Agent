@@ -31,6 +31,11 @@ window.MobileUI = {
         portUnrealized: document.getElementById('m-port-unrealized'),
         toast: document.getElementById('m-toast'),
 
+        // PIN Modal
+        pinModal: document.getElementById('m-pin-modal'),
+        pinDots: document.querySelectorAll('.m-pin-dot'),
+        btnWatchlistToggle: document.getElementById('m-btn-watchlist-toggle'),
+
         // Advanced Charting elements
         chartLabels: document.getElementById('m-chart-labels'),
         chartCrosshair: document.getElementById('m-chart-crosshair'),
@@ -43,6 +48,8 @@ window.MobileUI = {
         searchResultList: document.getElementById('m-search-results'),
         btnCloseSearch: document.getElementById('m-btn-close-search-overlay')
     },
+
+    pinBuffer: '',
 
     init() {
         if (!document.getElementById('m-app-root')) return;
@@ -222,10 +229,26 @@ window.MobileUI = {
         });
     },
 
-    selectStock(sym) {
-        if (typeof DesktopUI !== 'undefined') {
-            DesktopUI.loadStock(sym);
+    async selectStock(sym) {
+        // Load stock data for mobile
+        const quote = await getQuote(sym);
+        if (!quote) return;
+
+        STATE.currentStock = quote;
+        STATE.stockData.set(sym, quote);
+
+        // Fetch history
+        const hist = await getHistory(sym, STATE.chartRange);
+        if (hist) {
+            if (!STATE.stockHistory.has(sym)) STATE.stockHistory.set(sym, {});
+            STATE.stockHistory.get(sym)[STATE.chartRange] = hist;
         }
+
+        // Track with ticker
+        Ticker.track(sym);
+
+        // Update UI
+        this.updateActiveStockUI(sym, quote);
         this.switchView('m-view-analysis');
     },
 
@@ -338,6 +361,52 @@ window.MobileUI = {
     },
 
     executeTrade() {
+        // Show PIN modal instead of executing directly
+        this.els.tradeSheet.classList.add('hidden');
+        this.els.pinModal.classList.remove('hidden');
+        this.pinBuffer = '';
+        this.updatePINDisplay();
+    },
+
+    enterPIN(digit) {
+        if (this.pinBuffer.length < 4) {
+            this.pinBuffer += digit;
+            this.updatePINDisplay();
+
+            if (this.pinBuffer.length === 4) {
+                setTimeout(() => this.verifyPIN(), 300);
+            }
+        }
+    },
+
+    clearPIN() {
+        this.pinBuffer = this.pinBuffer.slice(0, -1);
+        this.updatePINDisplay();
+    },
+
+    cancelPIN() {
+        this.els.pinModal.classList.add('hidden');
+        this.pinBuffer = '';
+    },
+
+    updatePINDisplay() {
+        this.els.pinDots.forEach((dot, i) => {
+            dot.classList.toggle('filled', i < this.pinBuffer.length);
+        });
+    },
+
+    verifyPIN() {
+        if (this.pinBuffer === '1234') {
+            this.els.pinModal.classList.add('hidden');
+            this.processTransaction();
+        } else {
+            this.pinBuffer = '';
+            this.updatePINDisplay();
+            this.showToast('❌ Incorrect PIN');
+        }
+    },
+
+    processTransaction() {
         const action = STATE.pendingTradeAction;
         const symbol = STATE.currentStock.symbol;
         const qty = parseInt(this.els.tradeQty.value) || 0;
@@ -451,6 +520,30 @@ window.MobileUI = {
         div.innerHTML = content;
         this.els.chatHistory.appendChild(div);
         this.els.chatHistory.scrollTop = this.els.chatHistory.scrollHeight;
+    },
+
+    toggleWatchlist() {
+        if (!STATE.currentStock) return;
+        const sym = STATE.currentStock.symbol;
+        const idx = STATE.watchlist.indexOf(sym);
+
+        if (idx > -1) {
+            STATE.watchlist.splice(idx, 1);
+            this.showToast(`Removed ${sym} from watchlist`);
+        } else {
+            STATE.watchlist.push(sym);
+            this.showToast(`Added ${sym} to watchlist`);
+        }
+
+        localStorage.setItem('watchlist', JSON.stringify(STATE.watchlist));
+        this.updateWatchlistButton();
+        this.renderWatchlist();
+    },
+
+    updateWatchlistButton() {
+        if (!STATE.currentStock || !this.els.btnWatchlistToggle) return;
+        const isInWatchlist = STATE.watchlist.includes(STATE.currentStock.symbol);
+        this.els.btnWatchlistToggle.classList.toggle('active', isInWatchlist);
     },
 
     showToast(msg) {

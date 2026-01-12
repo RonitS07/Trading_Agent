@@ -96,7 +96,13 @@
             <section id="m-view-analysis" class="m-view">
                 <div class="m-analysis-card">
                     <div class="m-ticker-info">
-                        <h1 id="m-main-symbol">RELIANCE</h1>
+                        <div class="m-ticker-header">
+                            <h1 id="m-main-symbol">RELIANCE</h1>
+                            <button id="m-btn-watchlist-toggle" class="m-watchlist-btn"
+                                onclick="MobileUI.toggleWatchlist()">
+                                <i class="fa-solid fa-star"></i>
+                            </button>
+                        </div>
                         <div class="m-price-group">
                             <span id="m-main-price">₹2,456.90</span>
                             <span id="m-main-change" class="up">+1.24%</span>
@@ -239,6 +245,43 @@
                         </div>
                         <button id="m-btn-confirm-trade" class="m-execute-btn">EXECUTE ORDER</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PIN Verification Modal -->
+        <div id="m-pin-modal" class="m-overlay hidden">
+            <div class="m-pin-container">
+                <div class="m-pin-header">
+                    <div class="m-pin-icon">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <h2>VERIFY TRANSACTION</h2>
+                    <p>Enter your 4-digit PIN</p>
+                </div>
+                <div class="m-pin-display">
+                    <div class="m-pin-dot"></div>
+                    <div class="m-pin-dot"></div>
+                    <div class="m-pin-dot"></div>
+                    <div class="m-pin-dot"></div>
+                </div>
+                <div class="m-pin-keypad">
+                    <button class="m-pin-key" onclick="MobileUI.enterPIN('1')">1</button>
+                    <button class="m-pin-key" onclick="MobileUI.enterPIN('2')">2</button>
+                    <button class="m-pin-key" onclick="MobileUI.enterPIN('3')">3</button>
+                    <button class="m-pin-key" onclick="MobileUI.enterPIN('4')">4</button>
+                    <button class="m-pin-key" onclick="MobileUI.enterPIN('5')">5</button>
+                    <button class="m-pin-key" onclick="MobileUI.enterPIN('6')">6</button>
+                    <button class="m-pin-key" onclick="MobileUI.enterPIN('7')">7</button>
+                    <button class="m-pin-key" onclick="MobileUI.enterPIN('8')">8</button>
+                    <button class="m-pin-key" onclick="MobileUI.enterPIN('9')">9</button>
+                    <button class="m-pin-key m-pin-clear" onclick="MobileUI.clearPIN()">
+                        <i class="fa-solid fa-delete-left"></i>
+                    </button>
+                    <button class="m-pin-key" onclick="MobileUI.enterPIN('0')">0</button>
+                    <button class="m-pin-key m-pin-cancel" onclick="MobileUI.cancelPIN()">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
             </div>
         </div>
