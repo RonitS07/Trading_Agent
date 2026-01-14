@@ -32,18 +32,36 @@ const STATE = {
 async function searchAPI(query) {
     if (query.length < 2) return [];
     try {
-        const res = await fetch(`/api/search?q=${query}`);
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch(`/api/search?q=${query}`, { signal: controller.signal });
+        clearTimeout(id);
         return await res.json();
     } catch { return []; }
 }
 
 async function getQuote(symbol) {
     try {
-        const res = await fetch(`/api/quote?symbol=${symbol}`);
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch(`/api/quote?symbol=${symbol}`, { signal: controller.signal });
+        clearTimeout(id);
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         return data;
     } catch { return null; }
+}
+
+async function getHistory(symbol, range = '1d') {
+    try {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(`/api/history?symbol=${symbol}&range=${range}`, { signal: controller.signal });
+        clearTimeout(id);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        return data;
+    } catch (e) { console.error("History fetch failed:", e); return null; }
 }
 
 // --- TAX ENGINE (INDIAN MARKETS) ---
@@ -428,6 +446,11 @@ const DesktopUI = {
         this.updateChart();
         setInterval(() => this.updateMarketStatus(), 30000);
         setInterval(() => this.snapshotPortfolio(), 60000); // Snapshot once a minute
+
+        // Trigger default load
+        if (!STATE.currentStock && STATE.watchlist.length > 0) {
+            this.loadStock(STATE.watchlist[0]);
+        }
     },
 
     bindEvents() {
@@ -623,9 +646,9 @@ const DesktopUI = {
         if (!symbol) return;
         if (this.els.stockChartLoading) this.els.stockChartLoading.classList.remove('hidden');
         try {
-            const resp = await fetch(`/api/history?symbol=${symbol}&range=${range}`);
-            const data = await resp.json();
-            if (data.error) throw new Error(data.error);
+            // Use global getHistory with valid timeout
+            const data = await getHistory(symbol, range);
+            if (!data) throw new Error("No data");
 
             if (!STATE.stockHistory.has(symbol)) STATE.stockHistory.set(symbol, {});
             STATE.stockHistory.get(symbol)[range] = data;
