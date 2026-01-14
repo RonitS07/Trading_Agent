@@ -13,11 +13,14 @@
         window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
     <script defer src="/_vercel/insights/script.js"></script>
+    <script src="auth.js?v=1"></script>
 
     <script>
-        // Device Redirection
-        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-            window.location.href = "mobile.html";
+        // Device Redirection (Moved to after Auth check to prevent loops)
+        if (!window.location.pathname.includes('login.html')) {
+            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                window.location.href = "mobile.html";
+            }
         }
     </script>
 </head>
@@ -51,7 +54,7 @@
 
                 <div class="header-actions">
                     <div id="market-status-badge" class="market-tag">NSE/BSE LIVE</div>
-                    <div class="user-avatar">RS</div>
+                    <div class="user-avatar" onclick="Auth.logout()" title="Logout">RS</div>
                 </div>
             </div>
         </header>

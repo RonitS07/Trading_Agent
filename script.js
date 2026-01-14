@@ -1048,7 +1048,11 @@ const DesktopUI = {
 
     renderPortfolio() {
         if (!this.els.holdingsCont) return;
+        this.els.holdingsCont.innerHTML = ''; // Clear previous content
+
         let invested = 0;
+        let costBasis = 0; // Initialize costBasis variable
+
         Object.keys(STATE.portfolio).forEach(sym => {
             const p = STATE.portfolio[sym];
             const currentPrice = STATE.stockData.get(sym)?.displayPrice || p.avgCost || 0;

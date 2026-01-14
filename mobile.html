@@ -14,6 +14,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="mobile_style.css?v=2">
+    <script src="auth.js?v=1"></script>
 </head>
 
 <body class="mobile-app-theme">
@@ -25,7 +26,7 @@
 
         <!-- Top Navigation / Header -->
         <header class="m-top-bar">
-            <div class="m-profile-pill">
+            <div class="m-profile-pill" onclick="Auth.logout()">
                 <div class="m-avatar">S</div>
                 <div class="m-balance-group">
                     <span class="m-balance-label">WALLET</span>
