@@ -1,8 +1,7 @@
-'use client';
-
-import { signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 export default function Header({ user, activeTab, setActiveTab }) {
+    const router = useRouter();
     return (
         <header className="top-header">
             <div className="header-content">
@@ -27,11 +26,26 @@ export default function Header({ user, activeTab, setActiveTab }) {
 
                 <div className="header-actions">
                     <div id="market-status-badge" className="market-tag">NSE/BSE LIVE</div>
-                    <div className="user-avatar" onClick={() => signOut()} title="Logout">
-                        {user?.name?.[0] || 'U'}
+                    <div
+                        className="user-avatar"
+                        onClick={() => router.push('/profile')}
+                        title="View Profile"
+                        style={{
+                            border: '2px solid var(--accent-cyan)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'rgba(6, 182, 212, 0.1)',
+                            fontWeight: '600',
+                            marginLeft: '15px'
+                        }}
+                    >
+                        {user?.name?.[0] || <i className="fa-solid fa-user"></i>}
                     </div>
                 </div>
             </div>
         </header>
     );
 }
+

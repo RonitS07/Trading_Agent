@@ -1,17 +1,65 @@
-'use client';
-
-// import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Sidebar({ user, onSelectStock }) {
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState([]);
+    const [showResults, setShowResults] = useState(false);
     const holdings = user?.portfolio || [];
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (query.length >= 2) {
+                try {
+                    const res = await fetch(`/api/search?q=${query}`);
+                    const data = await res.json();
+                    setResults(data);
+                    setShowResults(true);
+                } catch (e) {
+                    console.error(e);
+                }
+            } else {
+                setResults([]);
+                setShowResults(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [query]);
 
     return (
         <aside className="sidebar-left">
             <div className="search-container">
                 <div className="search-input-wrapper">
                     <i className="fa-solid fa-magnifying-glass search-icon"></i>
-                    <input type="text" id="omnibar-input" placeholder="Search Stocks..." autoComplete="off" />
-                    <div id="search-results" className="search-dropdown hidden"></div>
+                    <input
+                        type="text"
+                        id="omnibar-input"
+                        placeholder="Search Stocks..."
+                        autoComplete="off"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onFocus={() => query.length >= 2 && setShowResults(true)}
+                    />
+                    {showResults && results.length > 0 && (
+                        <div id="search-results" className="search-dropdown">
+                            {results.map((item) => (
+                                <div
+                                    key={item.symbol}
+                                    className="w-item"
+                                    onClick={() => {
+                                        onSelectStock(item.symbol);
+                                        setQuery('');
+                                        setShowResults(false);
+                                    }}
+                                >
+                                    <div className="w-top">
+                                        <span>{item.symbol}</span>
+                                        <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{item.shortname}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 

@@ -1,10 +1,17 @@
 'use client';
 
 import StockChart from './StockChart';
+import PortfolioSummary from './PortfolioSummary';
 
-export default function OverviewTab() {
+export default function OverviewTab({ user }) {
+    const holdings = user?.portfolio || [];
+
     return (
         <div className="dashboard-grid">
+            <div className="card overview-stats-card" style={{ gridColumn: 'span 2' }}>
+                <PortfolioSummary user={user} />
+            </div>
+
             <div className="card chart-card">
                 <div className="card-header">
                     <h3>Market Overview (NIFTY 50)</h3>
@@ -16,12 +23,22 @@ export default function OverviewTab() {
 
             <div className="card intelligence-card">
                 <div className="card-header">
-                    <h3>AI Market Intelligence</h3>
-                    <i className="fa-solid fa-robot"></i>
+                    <h3>My Holdings</h3>
+                    <i className="fa-solid fa-briefcase"></i>
                 </div>
                 <div className="ai-box">
-                    <p className="blink">Market Sentiment: PROCESSING...</p>
-                    <p style={{ marginTop: '15px', opacity: 0.8 }}>Analyzing global indices and volatility.</p>
+                    {holdings.length === 0 ? (
+                        <p style={{ opacity: 0.6 }}>No active holdings to display.</p>
+                    ) : (
+                        <div className="mini-holdings-list">
+                            {holdings.slice(0, 5).map(h => (
+                                <div key={h.symbol} className="mini-holding-item" style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <span>{h.symbol}</span>
+                                    <span>{h.qty} @ ₹{h.avgCost.toFixed(2)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
