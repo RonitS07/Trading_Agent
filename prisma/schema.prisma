@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  balance   Float    @default(100000)
+  createdAt DateTime @default(now())
+
+  portfolio Portfolio[]
+  trades    Trade[]
+  history   History[]
+}
+
+model Portfolio {
+  id        String   @id @default(cuid())
+  userId    String
+  symbol    String
+  qty       Int
+  avgCost   Float
+  
+  user      User     @relation(fields: [userId], references: [id])
+  
+  @@unique([userId, symbol])
+}
+
+model Trade {
+  id        String   @id @default(cuid())
+  userId    String
+  symbol    String
+  action    String   // BUY or SELL
+  price     Float
+  qty       Int
+  cost      Float    // Total cost including tax
+  timestamp DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model History {
+  id         String   @id @default(cuid())
+  userId     String
+  date       DateTime @default(now())
+  totalValue Float
+  pl         Float
+  
+  user       User     @relation(fields: [userId], references: [id])
+}
