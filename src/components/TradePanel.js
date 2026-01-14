@@ -71,16 +71,19 @@ export default function TradePanel({ symbol, user, onTradeComplete }) {
                         flex: 1,
                         padding: '1rem',
                         background: '#00ff9d',
-                        boxShadow: '0 0 15px rgba(0, 255, 157, 0.3)',
+                        boxShadow: '0 0 25px rgba(0, 255, 157, 0.4), 0 0 50px rgba(0, 255, 157, 0.2)',
                         border: 'none',
                         borderRadius: '10px',
                         color: '#000',
                         fontWeight: '800',
                         cursor: 'pointer',
                         opacity: loading ? 0.7 : 1,
-                        transition: 'all 0.3s ease',
-                        letterSpacing: '1px'
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        letterSpacing: '1px',
+                        textShadow: '0 0 10px rgba(0,0,0,0.2)'
                     }}
+                    onMouseEnter={(e) => e.target.style.transform = 'scale(1.02) translateY(-2px)'}
+                    onMouseLeave={(e) => e.target.style.transform = 'scale(1) translateY(0)'}
                 >
                     BUY
                 </button>
@@ -92,16 +95,19 @@ export default function TradePanel({ symbol, user, onTradeComplete }) {
                         flex: 1,
                         padding: '1rem',
                         background: '#ff0055',
-                        boxShadow: '0 0 15px rgba(255, 0, 85, 0.3)',
+                        boxShadow: '0 0 25px rgba(255, 0, 85, 0.4), 0 0 50px rgba(255, 0, 85, 0.2)',
                         border: 'none',
                         borderRadius: '10px',
                         color: 'white',
                         fontWeight: '800',
                         cursor: 'pointer',
                         opacity: loading ? 0.7 : 1,
-                        transition: 'all 0.3s ease',
-                        letterSpacing: '1px'
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        letterSpacing: '1px',
+                        textShadow: '0 0 10px rgba(0,0,0,0.2)'
                     }}
+                    onMouseEnter={(e) => e.target.style.transform = 'scale(1.02) translateY(-2px)'}
+                    onMouseLeave={(e) => e.target.style.transform = 'scale(1) translateY(0)'}
                 >
                     SELL
                 </button>

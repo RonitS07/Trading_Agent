@@ -8,9 +8,11 @@ import MobileTerminal from './MobileTerminal';
 export default function Dashboard({ initialUser }) {
     const router = useRouter();
     const [user, setUser] = useState(initialUser);
+    const [hasMounted, setHasMounted] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
+        setHasMounted(true);
         const checkMobile = () => setIsMobile(window.innerWidth <= 768);
         checkMobile();
         window.addEventListener('resize', checkMobile);
@@ -30,8 +32,10 @@ export default function Dashboard({ initialUser }) {
         router.push('/profile');
     };
 
+    if (!hasMounted) return null;
+
     if (isMobile) {
-        return <MobileTerminal user={user} onLogout={handleLogout} />;
+        return <MobileTerminal user={user} onLogout={handleLogout} onTradeComplete={handleTradeComplete} />;
     }
 
     return <DesktopTerminal user={user} onTradeComplete={handleTradeComplete} />;

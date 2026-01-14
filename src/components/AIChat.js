@@ -54,7 +54,7 @@ const ActionPlanner = {
                     <div class="portfolio-insight">
                         <div class="insight-title">PORTFOLIO OVERVIEW</div>
                         <p>You currently have exposure in: <strong>${summary}</strong>.</p>
-                        <p>Your cash balance is ₹${user.balance.toLocaleString('en-IN')}. Diversification into defensive sectors is recommended given current market sentiment.</p>
+                        <p>Your cash balance is ₹${(user?.balance || 0).toLocaleString('en-IN')}. Diversification into defensive sectors is recommended given current market sentiment.</p>
                     </div>
                 `
             };
@@ -139,31 +139,37 @@ export default function AIChat({ selectedStockData, user }) {
 
         const userMsg = { role: 'user', content: input };
         setMessages(prev => [...prev, userMsg]);
+        const currentInput = input;
         setInput('');
 
         // Simulate AI thinking
         setTimeout(() => {
-            const res = ActionPlanner.generate(input, selectedStockData, user);
-            let aiContent = "";
-            if (res.isGeneral) {
-                aiContent = res.content;
-            } else {
-                aiContent = `
-                    <div class="ai-response-futuristic">
-                        <div class="strategy-header">
-                            <i class="fa-solid fa-microchip"></i>
-                            <span>${res.action} STRATEGY</span>
+            try {
+                const res = ActionPlanner.generate(currentInput, selectedStockData, user);
+                let aiContent = "";
+                if (res.isGeneral) {
+                    aiContent = res.content;
+                } else {
+                    aiContent = `
+                        <div class="ai-response-futuristic">
+                            <div class="strategy-header">
+                                <i class="fa-solid fa-microchip"></i>
+                                <span>${res.action || 'NEUTRAL'} STRATEGY</span>
+                            </div>
+                            <p class="strategy-reasoning">${res.reasoning || 'No specific reasoning available for this setup.'}</p>
+                            <div class="strategy-zone">
+                                <span class="z-label">EXECUTION ZONE:</span>
+                                <span class="z-val">${res.zone || 'N/A'}</span>
+                            </div>
+                            <div class="intent-discovery-v2">${res.followUp || ''}</div>
                         </div>
-                        <p class="strategy-reasoning">${res.reasoning}</p>
-                        <div class="strategy-zone">
-                            <span class="z-label">EXECUTION ZONE:</span>
-                            <span class="z-val">${res.zone}</span>
-                        </div>
-                        <div class="intent-discovery-v2">${res.followUp}</div>
-                    </div>
-                `;
+                    `;
+                }
+                setMessages(prev => [...prev, { role: 'ai', content: aiContent }]);
+            } catch (err) {
+                console.error("AI Generation Error:", err);
+                setMessages(prev => [...prev, { role: 'ai', content: "<p>I encountered an error processing that request. Please try selecting a stock or rephrasing.</p>" }]);
             }
-            setMessages(prev => [...prev, { role: 'ai', content: aiContent }]);
         }, 600);
     };
 

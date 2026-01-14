@@ -3,11 +3,18 @@
 import { useState, useEffect } from 'react';
 import StockChart from './StockChart';
 import AIChat from './AIChat';
+import TradePanel from './TradePanel';
 
-export default function MobileTerminal({ user, onLogout }) {
+export default function MobileTerminal({ user, onLogout, onTradeComplete }) {
     const [activeView, setActiveView] = useState('home');
     const [selectedStock, setSelectedStock] = useState('RELIANCE.NS');
     const [stockData, setStockData] = useState(null);
+    const [watchlist, setWatchlist] = useState(['RELIANCE.NS', 'TCS.NS', 'INFY.NS']);
+
+    useEffect(() => {
+        const saved = localStorage.getItem('tp_watchlist');
+        if (saved) setWatchlist(JSON.parse(saved));
+    }, []);
 
     useEffect(() => {
         const fetchStock = async () => {
@@ -58,12 +65,13 @@ export default function MobileTerminal({ user, onLogout }) {
 
                         <h3>WATCHLIST</h3>
                         <div className="m-scroll-list">
-                            {['RELIANCE.NS', 'TCS.NS', 'INFY.NS'].map(sym => (
-                                <div key={sym} onClick={() => { setSelectedStock(sym); setActiveView('analysis'); }} style={{ padding: '15px', background: '#1e293b', borderRadius: '16px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}>
-                                    <span>{sym}</span>
-                                    <span style={{ color: '#22c55e' }}>+1.2%</span>
+                            {watchlist.map(sym => (
+                                <div key={sym} onClick={() => { setSelectedStock(sym); setActiveView('analysis'); }} style={{ padding: '15px', background: '#1e293b', borderRadius: '16px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <span style={{ fontWeight: '600' }}>{sym}</span>
+                                    <span style={{ color: '#22c55e', fontFamily: 'var(--font-mono)' }}>LIVE</span>
                                 </div>
                             ))}
+                            {watchlist.length === 0 && <div style={{ opacity: 0.5, textAlign: 'center', padding: '20px' }}>Watchlist is empty</div>}
                         </div>
                     </section>
                 )}
@@ -81,16 +89,13 @@ export default function MobileTerminal({ user, onLogout }) {
                             <StockChart symbol={selectedStock} range="1d" />
                         </div>
 
-                        <div style={{ display: 'flex', gap: '15px', marginTop: '20px' }}>
-                            <button style={{ flex: 1, padding: '15px', borderRadius: '15px', background: '#22c55e', border: 'none', color: 'black', fontWeight: 'bold' }}>BUY</button>
-                            <button style={{ flex: 1, padding: '15px', borderRadius: '15px', background: '#ef4444', border: 'none', color: 'white', fontWeight: 'bold' }}>SELL</button>
-                        </div>
+                        <TradePanel symbol={selectedStock} user={user} onTradeComplete={onTradeComplete} />
                     </section>
                 )}
 
                 {activeView === 'ai' && (
                     <section id="m-view-ai">
-                        <AIChat selectedStockData={stockData} />
+                        <AIChat selectedStockData={stockData} user={user} />
                     </section>
                 )}
 

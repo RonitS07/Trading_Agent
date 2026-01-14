@@ -14,7 +14,6 @@ export default function AnalysisTab({ user, symbol, stockData, onTradeComplete }
         { label: '1W', value: '1w' },
         { label: '1M', value: '1mo' },
         { label: '6M', value: '6mo' },
-        { label: '1Y', value: '1y' },
         { label: '5Y', value: '5y' },
     ];
 

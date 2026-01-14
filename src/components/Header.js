@@ -22,6 +22,9 @@ export default function Header({ user, activeTab, setActiveTab }) {
                     <button className={`nav-btn ${activeTab === 'planner' ? 'active' : ''}`} onClick={() => setActiveTab('planner')}>
                         <i className="fa-solid fa-brain"></i> AI Planner
                     </button>
+                    <button className={`nav-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => router.push('/profile')}>
+                        <i className="fa-solid fa-user-gear"></i> Profile
+                    </button>
                 </nav>
 
                 <div className="header-actions">
