@@ -315,13 +315,33 @@ window.MobileUI = {
 
             if (!svgPath || !svgArea) return;
 
+            // FIX 1 & 2: Dynamic Dimensions & Visibility Check
+            const svg = svgPath.ownerSVGElement;
+            if (!svg) return;
+
+            const w = svg.clientWidth;
+            const h = svg.clientHeight;
+
+            if (w === 0 || h === 0) {
+                window.requestAnimationFrame(() => this.renderChart(sym));
+                return;
+            }
+
             const history = STATE.stockHistory.get(sym)?.[STATE.chartRange];
 
+            // FIX 3: Normalize History
+            // Filter invalid, normalize to price
+            const validHistory = (history || []).filter(d => {
+                const val = d.price ?? d.val;
+                return val !== null && val !== undefined && !isNaN(val);
+            }).map(d => ({ ...d, price: parseFloat(d.price ?? d.val) }));
+
             // Show loading state or empty state
-            if (!history || history.length < 2) {
+            if (validHistory.length < 2) {
                 // Draw a flat line as placeholder
-                svgPath.setAttribute('d', 'M 0,90 L 400,90');
-                svgArea.setAttribute('d', 'M 0,90 L 400,90 L 400,180 L 0,180 Z');
+                const midY = h / 2;
+                svgPath.setAttribute('d', `M 0,${midY} L ${w},${midY}`);
+                svgArea.setAttribute('d', `M 0,${midY} L ${w},${midY} L ${w},${h} L 0,${h} Z`);
                 svgPath.setAttribute('stroke', '#334155');
                 svgArea.setAttribute('fill', 'rgba(51, 65, 85, 0.1)');
 
@@ -331,22 +351,27 @@ window.MobileUI = {
                 return;
             }
 
-            const prices = history.map(h => h.price);
+            const prices = validHistory.map(h => h.price);
             const min = Math.min(...prices);
             const max = Math.max(...prices);
             const range = (max - min) || 1;
 
-            const points = history.map((h, i) => {
-                const x = (i / (history.length - 1)) * 400;
-                const y = 180 - ((h.price - min) / range) * 140 - 20;
+            const padTop = 20;
+            const padBot = 20;
+            const availableH = h - (padTop + padBot);
+
+            const points = validHistory.map((item, i) => {
+                const x = (i / (validHistory.length - 1)) * w;
+                const normalized = (item.price - min) / range;
+                const y = h - padBot - (normalized * availableH);
                 return `${x},${y}`;
             });
 
             const d = `M ${points.join(' L ')}`;
             svgPath.setAttribute('d', d);
-            svgArea.setAttribute('d', `${d} L 400,180 L 0,180 Z`);
+            svgArea.setAttribute('d', `${d} L ${w},${h} L 0,${h} Z`);
 
-            const isUp = history[history.length - 1].price >= history[0].price;
+            const isUp = validHistory[validHistory.length - 1].price >= validHistory[0].price;
             const color = isUp ? '#22c55e' : '#ef4444';
             svgPath.setAttribute('stroke', color);
 
@@ -356,9 +381,9 @@ window.MobileUI = {
             // Render Time Labels
             if (this.els.chartLabels) {
                 this.els.chartLabels.innerHTML = '';
-                const indices = [0, Math.floor(history.length / 2), history.length - 1];
+                const indices = [0, Math.floor(validHistory.length / 2), validHistory.length - 1];
                 indices.forEach(idx => {
-                    const h = history[idx];
+                    const h = validHistory[idx];
                     if (h && h.time) {
                         const time = new Date(h.time * 1000);
                         const label = document.createElement('span');
@@ -368,7 +393,7 @@ window.MobileUI = {
                 });
             }
 
-            STATE.activeMobileChartData = history;
+            STATE.activeMobileChartData = validHistory;
 
         } catch (e) {
             console.error("Chart Render Error:", e);

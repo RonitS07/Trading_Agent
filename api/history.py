@@ -39,3 +39,4 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(history).encode())
         except Exception as e:
             self.wfile.write(json.dumps({"error": str(e)}).encode())
+

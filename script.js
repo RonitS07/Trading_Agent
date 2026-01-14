@@ -640,22 +640,43 @@ const DesktopUI = {
     },
 
     renderStockChart(data) {
+        // FIX 3: Normalize Data
         if (!data || data.length < 2) return;
-        STATE.activeChartData = data;
+
+        const validData = data.filter(d => {
+            const val = d.price ?? d.val;
+            return val !== null && val !== undefined && !isNaN(val);
+        }).map(d => ({ ...d, price: parseFloat(d.price ?? d.val) }));
+
+        if (validData.length < 2) return;
+
+        STATE.activeChartData = validData;
         const path = this.els.stockChartPath;
         if (!path) return;
 
-        const width = 600;
-        const height = 200;
-        const padding = 30; // 5% of width (600) for perfect alignment
+        // FIX 1 & 2: Dynamic Dimensions & Visibility Check
+        const svg = path.ownerSVGElement || path.closest('svg');
+        if (!svg) return;
 
-        const prices = data.map(d => d.price);
+        const w = svg.clientWidth;
+        const h = svg.clientHeight;
+
+        if (w === 0 || h === 0) {
+            window.requestAnimationFrame(() => this.renderStockChart(validData));
+            return;
+        }
+
+        const width = w;
+        const height = h;
+        const padding = 30; // Keep proportional padding if needed, or fixed 30
+
+        const prices = validData.map(d => d.price);
         const minVal = Math.min(...prices);
         const maxVal = Math.max(...prices);
-        const valRange = (maxVal - minVal) || 1; // Avoid division by zero
+        const valRange = (maxVal - minVal) || 1;
 
-        const points = data.map((d, i) => {
-            const x = (i / (data.length - 1)) * (width - padding * 2) + padding;
+        const points = validData.map((d, i) => {
+            const x = (i / (validData.length - 1)) * (width - padding * 2) + padding;
             const y = height - ((d.price - minVal) / valRange) * (height - padding * 2) - padding;
             return { x, y };
         });
@@ -673,7 +694,7 @@ const DesktopUI = {
         path.setAttribute('stroke-linecap', 'round');
 
         // Render Date Labels
-        this.renderDateLabels(data);
+        this.renderDateLabels(validData);
     },
 
     renderDateLabels(data) {
@@ -930,17 +951,36 @@ const DesktopUI = {
     updateChart() {
         if (!this.els.chartPathLine || STATE.history.length < 2) return;
 
-        const data = STATE.history;
-        const width = 400;
-        const height = 150;
+        const path = this.els.chartPathLine;
+        const svg = path.ownerSVGElement || path.closest('svg');
+        if (!svg) return;
+
+        const w = svg.clientWidth;
+        const h = svg.clientHeight;
+
+        if (w === 0 || h === 0) {
+            window.requestAnimationFrame(() => this.updateChart());
+            return;
+        }
+
+        const width = w;
+        const height = h;
         const padding = 20;
 
-        const minVal = Math.min(...data.map(d => d.val)) * 0.999;
-        const maxVal = Math.max(...data.map(d => d.val)) * 1.001;
-        const valRange = maxVal - minVal;
+        // Normalize Data (Just in case)
+        const validData = STATE.history.filter(d => {
+            const val = d.price ?? d.val;
+            return val !== null && val !== undefined && !isNaN(val);
+        }).map(d => ({ ...d, val: parseFloat(d.price ?? d.val) }));
 
-        const points = data.map((d, i) => {
-            const x = (i / (data.length - 1)) * width;
+        if (validData.length < 2) return;
+
+        const minVal = Math.min(...validData.map(d => d.val)) * 0.999;
+        const maxVal = Math.max(...validData.map(d => d.val)) * 1.001;
+        const valRange = (maxVal - minVal) || 1;
+
+        const points = validData.map((d, i) => {
+            const x = (i / (validData.length - 1)) * width;
             const y = height - ((d.val - minVal) / valRange) * (height - padding * 2) - padding;
             return { x, y };
         });
