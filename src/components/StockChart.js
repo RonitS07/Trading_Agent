@@ -17,7 +17,9 @@ export default function StockChart({ symbol, range = '1d' }) {
                     setData(data);
                 }
             })
-            .catch(err => console.error(err))
+            .catch(err => {
+                // Silent catch for UI cleanliness
+            })
             .finally(() => setLoading(false));
     }, [symbol, range]);
 

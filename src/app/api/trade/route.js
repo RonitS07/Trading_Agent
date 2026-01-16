@@ -17,7 +17,7 @@ async function getCurrentPrice(symbol) {
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { userId, symbol, action, qty } = body;
+        const { userId, symbol, action, qty, password } = body;
 
         if (!userId || !symbol || !action || !qty || qty <= 0) {
             return NextResponse.json({ error: 'Invalid trade params' }, { status: 400 });
@@ -29,7 +29,14 @@ export async function POST(request) {
             include: { portfolio: true }
         });
 
-        if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        if (!user) {
+            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        }
+
+        // Verify Password
+        if (!password || !(await bcrypt.compare(password, user.password))) {
+            return NextResponse.json({ error: 'Invalid Security Key (Password)' }, { status: 401 });
+        }
 
         // 2. Get Live Price
         const price = await getCurrentPrice(symbol);
@@ -124,7 +131,7 @@ export async function POST(request) {
         return NextResponse.json({ success: true, balance: result.newBalance, price });
 
     } catch (error) {
-        console.error("Trade Error:", error);
+        // console.error("Trade Error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

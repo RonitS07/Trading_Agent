@@ -25,7 +25,7 @@ export default function Dashboard({ initialUser }) {
             const res = await fetch(`/api/user?userId=${user.id}`);
             const updated = await res.json();
             if (!updated.error) setUser(updated);
-        } catch (e) { console.error(e); }
+        } catch (e) { /* silent */ }
     };
 
     const handleLogout = () => {

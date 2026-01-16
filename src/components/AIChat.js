@@ -28,22 +28,8 @@ const ActionPlanner = {
         const holdings = user?.portfolio || [];
         const currentHolding = stock ? holdings.find(h => h.symbol === stock.symbol) : null;
 
-        const isEmotional = goal.includes("panic") || goal.includes("scared") || goal.includes("help") || goal.includes("quick money") || goal.includes("profit fast") || goal.includes("recover");
-
-        if (isEmotional) {
-            return {
-                isGeneral: true,
-                content: `
-                    <div class="ai-warning">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                        <strong>Emotional volatility detected in query.</strong>
-                        <p>High-frequency trading requires a disciplined approach. We should avoid revenge trading or FOMO entries. Let's look at the volatility index first.</p>
-                    </div>
-                `
-            };
-        }
-
-        if (goal.includes("portfolio") || goal.includes("balance") || goal.includes("holdings") || goal.includes("my shares")) {
+        // Portfolio-related queries
+        if (goal.includes("portfolio") || goal.includes("balance") || goal.includes("holdings") || goal.includes("my shares") || goal.includes("net worth")) {
             if (!user) return { isGeneral: true, content: "<p>Please login to view portfolio insights.</p>" };
             if (holdings.length === 0) return { isGeneral: true, content: "<p>Your portfolio is currently empty. Start by adding a blue-chip stock from the sidebar.</p>" };
 
@@ -54,66 +40,71 @@ const ActionPlanner = {
                     <div class="portfolio-insight">
                         <div class="insight-title">PORTFOLIO OVERVIEW</div>
                         <p>You currently have exposure in: <strong>${summary}</strong>.</p>
-                        <p>Your cash balance is ₹${(user?.balance || 0).toLocaleString('en-IN')}. Diversification into defensive sectors is recommended given current market sentiment.</p>
+                        <p>Your total cash balance is ₹${(user?.balance || 0).toLocaleString('en-IN')}. Diversification into defensive sectors is recommended given current market sentiment.</p>
                     </div>
                 `
             };
         }
 
-        if (!stock) {
+        // Strategy queries with a selected stock
+        if (stock && (goal.includes("buy") || goal.includes("sell") || goal.includes("strategy") || goal.includes("plan") || goal.includes("trade") || goal.includes("target"))) {
+            const price = stock.price || 0;
+            const change = stock.changePct || 0;
+            let horizon = "SWING";
+            if (goal.includes("intraday") || goal.includes("short")) horizon = "INTRADAY";
+            if (goal.includes("long") || goal.includes("year") || goal.includes("investment")) horizon = "LONG-TERM";
+
+            const isSellIntent = goal.includes("sell") || goal.includes("exit") || goal.includes("profit");
+            let action = "HOLD";
+            let reasoning = "";
+            let zone = "";
+
+            if (currentHolding) {
+                reasoning = `You already hold ${currentHolding.qty} shares of ${stock.symbol} at an average of ₹${currentHolding.avgCost.toFixed(2)}. `;
+                if (isSellIntent) {
+                    action = "EXIT/REDUCE";
+                    zone = `₹${(price * 1.02).toFixed(2)}+`;
+                    reasoning += `Profit taking is advisable as the RSI indicates overbought levels for this ${horizon} position.`;
+                } else if (price < currentHolding.avgCost * 0.95) {
+                    action = "AVERAGE DOWN";
+                    zone = `₹${(price * 0.99).toFixed(2)} - ₹${price.toFixed(2)}`;
+                    reasoning += `Your position is currently down. Averaging here could lower your cost basis significantly.`;
+                } else {
+                    action = "HOLD/PYRAMID";
+                    zone = `₹${(price * 1.01).toFixed(2)}`;
+                    reasoning += `Momentum is strong. Consider adding to your winners.`;
+                }
+            } else {
+                if (isSellIntent) {
+                    action = "NEUTRAL";
+                    zone = "N/A";
+                    reasoning = `You don't have an active position in ${stock.symbol} to exit.`;
+                } else {
+                    action = "BUY/ENTER";
+                    zone = `₹${(price * 0.98).toFixed(2)} - ₹${price.toFixed(2)}`;
+                    reasoning = `${stock.symbol} setup looks favorable for a ${horizon} entry. Volume profile is increasing.`;
+                }
+            }
+
             return {
-                isGeneral: true,
-                content: `
-                    <p>${this.getRandom(this.TEMPLATES.OPENINGS)}</p>
-                    <p>To provide a high-precision strategy, please select a stock from the sidebar or ask about your portfolio.</p>
-                `
+                isGeneral: false,
+                action,
+                reasoning,
+                zone,
+                followUp: this.getRandom(this.TEMPLATES.FOLLOW_UPS)
             };
         }
 
-        const price = stock.price || 0;
-        const change = stock.changePct || 0;
-        let horizon = "SWING";
-        if (goal.includes("intraday") || goal.includes("short")) horizon = "INTRADAY";
-        if (goal.includes("long") || goal.includes("year") || goal.includes("investment")) horizon = "LONG-TERM";
-
-        const isSellIntent = goal.includes("sell") || goal.includes("exit") || goal.includes("profit");
-        let action = "HOLD";
-        let reasoning = "";
-        let zone = "";
-
-        if (currentHolding) {
-            reasoning = `You already hold ${currentHolding.qty} shares of ${stock.symbol} at an average of ₹${currentHolding.avgCost.toFixed(2)}. `;
-            if (isSellIntent) {
-                action = "EXIT/REDUCE";
-                zone = `₹${(price * 1.02).toFixed(2)}+`;
-                reasoning += `Profit taking is advisable as the RSI indicates overbought levels for this ${horizon} position.`;
-            } else if (price < currentHolding.avgCost * 0.95) {
-                action = "AVERAGE DOWN";
-                zone = `₹${(price * 0.99).toFixed(2)} - ₹${price.toFixed(2)}`;
-                reasoning += `Your position is currently down. Averaging here could lower your cost basis significantly.`;
-            } else {
-                action = "HOLD/PYRAMID";
-                zone = `₹${(price * 1.01).toFixed(2)}`;
-                reasoning += `Momentum is strong. Consider adding to your winners.`;
-            }
-        } else {
-            if (isSellIntent) {
-                action = "NEUTRAL";
-                zone = "N/A";
-                reasoning = `You don't have an active position in ${stock.symbol} to exit.`;
-            } else {
-                action = "BUY/ENTER";
-                zone = `₹${(price * 0.98).toFixed(2)} - ₹${price.toFixed(2)}`;
-                reasoning = `${stock.symbol} setup looks favorable for a ${horizon} entry. Volume profile is increasing.`;
-            }
-        }
-
+        // General fallback for all other queries
         return {
-            isGeneral: false,
-            action,
-            reasoning,
-            zone,
-            followUp: this.getRandom(this.FOLLOW_UPS)
+            isGeneral: true,
+            content: `
+                <div class="ai-general-reply">
+                    <p>${this.getRandom(this.TEMPLATES.OPENINGS)}</p>
+                    <p>I'm here to help with your trading strategy and portfolio management. You can ask about specific stocks, your current holdings, or general market sentiment.</p>
+                    <p style="opacity: 0.7; font-size: 0.8rem; margin-top: 10px;">TIP: Select a stock from the sidebar to get a detailed execution strategy.</p>
+                </div>
+            `
         };
     }
 };
@@ -142,10 +133,33 @@ export default function AIChat({ selectedStockData, user }) {
         const currentInput = input;
         setInput('');
 
+        // Symbol detection (simple regex for common Indian patterns or single words)
+        const words = currentInput.toUpperCase().replace(/[?!.]/g, '').split(/\s+/);
+        const stopWords = ['THE', 'FOR', 'AND', 'WHAT', 'SELL', 'BUY', 'WITH', 'YOUR', 'THIS', 'THAT', 'FROM', 'HOW', 'PRICE', 'CHART', 'STOCK', 'PLANS', 'SHOULD', 'ABOUT'];
+        const potentialSymbol = words.find(w => w.length >= 3 && w.length <= 10 && !stopWords.includes(w));
+
         // Simulate AI thinking
-        setTimeout(() => {
+        setTimeout(async () => {
             try {
-                const res = ActionPlanner.generate(currentInput, selectedStockData, user);
+                let contextStock = selectedStockData;
+
+                // If the user mentioned a symbol, try to fetch its data if needed
+                if (potentialSymbol && (!selectedStockData || !selectedStockData.symbol.includes(potentialSymbol))) {
+                    try {
+                        const searchRes = await fetch(`/api/search?q=${potentialSymbol}`);
+                        const searchData = await searchRes.json();
+                        if (searchData.length > 0) {
+                            const exactSymbol = searchData[0].symbol;
+                            const quoteRes = await fetch(`/api/quote?symbol=${exactSymbol}`);
+                            contextStock = await quoteRes.json();
+                        }
+                    } catch (err) {
+                        // Silent warning
+                        // console.warn("Auto-symbol lookup failed:", err);
+                    }
+                }
+
+                const res = ActionPlanner.generate(currentInput, contextStock, user);
                 let aiContent = "";
                 if (res.isGeneral) {
                     aiContent = res.content;
@@ -154,7 +168,7 @@ export default function AIChat({ selectedStockData, user }) {
                         <div class="ai-response-futuristic">
                             <div class="strategy-header">
                                 <i class="fa-solid fa-microchip"></i>
-                                <span>${res.action || 'NEUTRAL'} STRATEGY</span>
+                                <span>${res.action || 'NEUTRAL'} STRATEGY: ${contextStock?.symbol || ''}</span>
                             </div>
                             <p class="strategy-reasoning">${res.reasoning || 'No specific reasoning available for this setup.'}</p>
                             <div class="strategy-zone">
@@ -167,7 +181,8 @@ export default function AIChat({ selectedStockData, user }) {
                 }
                 setMessages(prev => [...prev, { role: 'ai', content: aiContent }]);
             } catch (err) {
-                console.error("AI Generation Error:", err);
+                // Silent error
+                // console.error("AI Generation Error:", err);
                 setMessages(prev => [...prev, { role: 'ai', content: "<p>I encountered an error processing that request. Please try selecting a stock or rephrasing.</p>" }]);
             }
         }, 600);

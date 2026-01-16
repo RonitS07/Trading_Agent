@@ -31,11 +31,8 @@ export default function Header({ user, activeTab, setActiveTab }) {
                     <div id="market-status-badge" className="market-tag">NSE/BSE LIVE</div>
                     <div
                         className="user-avatar"
-                        onClick={() => router.push('/profile')}
-                        title="View Profile"
                         style={{
                             border: '2px solid var(--accent-cyan)',
-                            cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',

@@ -33,7 +33,7 @@ export default function Sidebar({ user, onSelectStock }) {
                     setResults(data);
                     setShowResults(true);
                 } catch (e) {
-                    console.error(e);
+                    // Silent
                 }
             } else {
                 setResults([]);

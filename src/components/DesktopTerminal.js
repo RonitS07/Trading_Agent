@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from './Header';
 import Sidebar from './Sidebar';
@@ -11,20 +11,26 @@ import AIChat from './AIChat';
 
 export default function DesktopTerminal({ user, onTradeComplete }) {
     const [activeTab, setActiveTab] = useState('overview');
-    const [selectedStock, setSelectedStock] = useState(null);
+    const [selectedStock, setSelectedStock] = useState('RELIANCE.NS');
     const [selectedStockData, setSelectedStockData] = useState(null);
 
-    const handleStockSelect = async (symbol) => {
+    const handleStockSelect = async (symbol, shouldSwitchTab = true) => {
         setSelectedStock(symbol);
-        setActiveTab('analysis');
+        if (shouldSwitchTab) setActiveTab('analysis');
         try {
             const res = await fetch(`/api/quote?symbol=${symbol}`);
             const data = await res.json();
             setSelectedStockData(data);
         } catch (e) {
-            console.error(e);
+            // silent
         }
-    };
+    }
+    // Initialize default stock data
+    useEffect(() => {
+        if (!selectedStockData && selectedStock) {
+            handleStockSelect(selectedStock, false);
+        }
+    }, []);
 
     return (
         <div className="pro-theme">
@@ -33,6 +39,8 @@ export default function DesktopTerminal({ user, onTradeComplete }) {
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
             />
+
+            <PortfolioSummary user={user} />
 
             <div className="main-layout">
                 <Sidebar user={user} onSelectStock={handleStockSelect} />
