@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function TradePanel({ symbol, user, onTradeComplete }) {
+export default function TradePanel({ symbol, user, onTradeComplete, marketStatus }) {
     const router = useRouter();
     const [qty, setQty] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -214,18 +214,18 @@ export default function TradePanel({ symbol, user, onTradeComplete }) {
             <div style={{ display: 'flex', gap: '1rem' }}>
                 <button
                     onClick={() => onActionClick('BUY')}
-                    disabled={loading}
+                    disabled={loading || (marketStatus && !marketStatus.open)}
                     className="btn-futuristic btn-buy"
                     style={{
                         flex: 1,
                         padding: '1rem',
-                        background: '#022c22', // Deepest Green
-                        border: '1px solid #00dc82', // Neon Green Border
-                        boxShadow: '0 0 15px rgba(0, 220, 130, 0.15)',
+                        background: (marketStatus && !marketStatus.open) ? 'rgba(2, 44, 34, 0.4)' : '#022c22',
+                        border: `1px solid ${(marketStatus && !marketStatus.open) ? 'rgba(0, 220, 130, 0.2)' : '#00dc82'}`,
+                        boxShadow: (marketStatus && !marketStatus.open) ? 'none' : '0 0 15px rgba(0, 220, 130, 0.15)',
                         borderRadius: '12px',
-                        color: '#00dc82',
+                        color: (marketStatus && !marketStatus.open) ? 'rgba(0, 220, 130, 0.3)' : '#00dc82',
                         fontWeight: '800',
-                        cursor: 'pointer',
+                        cursor: (marketStatus && !marketStatus.open) ? 'not-allowed' : 'pointer',
                         transition: 'all 0.3s ease',
                         letterSpacing: '1px',
                         fontSize: '1rem'
@@ -235,18 +235,18 @@ export default function TradePanel({ symbol, user, onTradeComplete }) {
                 </button>
                 <button
                     onClick={() => onActionClick('SELL')}
-                    disabled={loading}
+                    disabled={loading || (marketStatus && !marketStatus.open)}
                     className="btn-futuristic btn-sell"
                     style={{
                         flex: 1,
                         padding: '1rem',
-                        background: '#2b0505', // Deepest Red
-                        border: '1px solid #ff0055', // Neon Red Border
-                        boxShadow: '0 0 15px rgba(255, 0, 85, 0.15)',
+                        background: (marketStatus && !marketStatus.open) ? 'rgba(43, 5, 5, 0.4)' : '#2b0505',
+                        border: `1px solid ${(marketStatus && !marketStatus.open) ? 'rgba(255, 0, 85, 0.2)' : '#ff0055'}`,
+                        boxShadow: (marketStatus && !marketStatus.open) ? 'none' : '0 0 15px rgba(255, 0, 85, 0.15)',
                         borderRadius: '12px',
-                        color: '#ff0055',
+                        color: (marketStatus && !marketStatus.open) ? 'rgba(255, 0, 85, 0.3)' : '#ff0055',
                         fontWeight: '800',
-                        cursor: 'pointer',
+                        cursor: (marketStatus && !marketStatus.open) ? 'not-allowed' : 'pointer',
                         transition: 'all 0.3s ease',
                         letterSpacing: '1px',
                         fontSize: '1rem'
@@ -255,6 +255,21 @@ export default function TradePanel({ symbol, user, onTradeComplete }) {
                     SELL
                 </button>
             </div>
+            {marketStatus && !marketStatus.open && (
+                <div style={{
+                    marginTop: '1rem',
+                    padding: '12px',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: '12px',
+                    textAlign: 'center',
+                    color: '#f59e0b',
+                    fontSize: '0.85rem'
+                }}>
+                    <i className="fa-solid fa-clock" style={{ marginRight: '8px' }}></i>
+                    <strong>Market is Closed:</strong> {marketStatus.reason}
+                </div>
+            )}
             {message && (
                 <div style={{
                     marginTop: '1rem',

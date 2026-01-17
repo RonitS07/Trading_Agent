@@ -2,95 +2,62 @@
 
 import { useState, useEffect } from 'react';
 import StockChart from './StockChart';
+import { usePortfolioData } from '@/hooks/usePortfolioData';
 
 export default function OverviewTab({ user }) {
-    const [quotes, setQuotes] = useState({});
+    const {
+        quotes,
+        holdings,
+        netWorth,
+        invested,
+        unrealizedPL,
+        unrealizedPLPct,
+        balance,
+        totalPL,
+        totalPLPct
+    } = usePortfolioData(user);
+
     const [sentiment, setSentiment] = useState({ bullish: 65, bearish: 35 });
-    const holdings = user?.portfolio || [];
 
+    // Enhanced Sentiment Logic (Phase 3)
     useEffect(() => {
-        if (holdings.length === 0) return;
-
-        // Fetch real data (Anchor)
-        const fetchPrices = async () => {
+        const fetchSentiment = async () => {
             try {
-                const symbols = holdings.map(h => h.symbol).join(',');
-                const res = await fetch(`/api/quote?symbol=${symbols}`);
-                const data = await res.json();
-
-                const quoteMap = {};
-                if (Array.isArray(data)) {
-                    data.forEach(q => quoteMap[q.symbol] = q);
-                } else if (data && data.symbol) {
-                    quoteMap[data.symbol] = data;
-                }
-
-                // Merge with existing quotes to avoid flicker reset if possible, 
-                // but here we just update the base anchor.
-                setQuotes(prev => ({ ...prev, ...quoteMap }));
-
-                // Mock sentiment based on NIFTY or aggregate performance
+                // Fetch NIFTY to gauge market direction
                 const niftyRes = await fetch('/api/quote?symbol=^NSEI');
                 const niftyData = await niftyRes.json();
-                const niftyChange = niftyData.changePct || 0;
-                const baseBullish = 50 + (niftyChange * 5);
-                const finalBullish = Math.min(Math.max(baseBullish, 10), 90);
-                setSentiment({ bullish: Math.round(finalBullish), bearish: 100 - Math.round(finalBullish) });
-            } catch (e) {
-                // Silent failure for UI polish
-            }
+
+                // Fetch VIX if possible (Symbol for India VIX often differ, using fallback logic)
+                // For now, heuristic based on NIFTY change magnitude
+                const change = niftyData.changePct || 0;
+                const absChange = Math.abs(change);
+
+                // Base bullish score (0-100)
+                // If change is +1%, bullish = 75. If -1%, bullish = 25.
+                let baseBullish = 50 + (change * 25);
+                baseBullish = Math.min(Math.max(baseBullish, 15), 85);
+
+                // Confidence based on magnitude of move
+                let confidence = "Low";
+                if (absChange > 0.5) confidence = "Moderate";
+                if (absChange > 1.0) confidence = "High";
+
+                // Reasoning generation
+                let reason = "Market is trading flat.";
+                if (change > 0.5) reason = "Strong buying momentum driven by index heavyweights.";
+                else if (change < -0.5) reason = "Profit booking visible at higher levels.";
+                else if (change > 0) reason = "Mildly positive bias with consolidation.";
+
+                setSentiment({
+                    bullish: Math.round(baseBullish),
+                    bearish: 100 - Math.round(baseBullish),
+                    confidence,
+                    reason
+                });
+            } catch (e) { /* silent */ }
         };
-
-        // Rapid Simulation (Micro-movements)
-        const simulateLive = () => {
-            setQuotes(prevQuotes => {
-                const nextQuotes = { ...prevQuotes };
-                let hasChanges = false;
-
-                for (const symbol in nextQuotes) {
-                    const q = nextQuotes[symbol];
-                    if (!q) continue;
-
-                    // Random micro fluctuation: -0.1% to +0.1% of price
-                    const volatility = 0.001;
-                    const change = q.price * volatility * (Math.random() - 0.5);
-                    const newPrice = q.price + change;
-
-                    nextQuotes[symbol] = {
-                        ...q,
-                        price: newPrice,
-                        changePct: ((newPrice - q.prevClose) / q.prevClose) * 100
-                    };
-                    hasChanges = true;
-                }
-                return hasChanges ? nextQuotes : prevQuotes;
-            });
-        };
-
-        // Initial fetch
-        fetchPrices();
-
-        // Real data update every 30s
-        const fetchInterval = setInterval(fetchPrices, 30000);
-
-        // Simulation update every 800ms for "live" feel
-        const simInterval = setInterval(simulateLive, 800);
-
-        return () => {
-            clearInterval(fetchInterval);
-            clearInterval(simInterval);
-        }
-    }, [holdings]);
-
-    // Formulas
-    const invested = holdings.reduce((acc, h) => acc + (h.qty * h.avgCost), 0);
-    const valuation = holdings.reduce((acc, h) => {
-        const ltp = quotes[h.symbol]?.price || h.avgCost;
-        return acc + (h.qty * ltp);
-    }, 0);
-    const unrealizedPL = valuation - invested;
-    const balance = user?.balance || 0;
-    const netWorth = balance + valuation;
+        fetchSentiment();
+    }, []);
 
     return (
         <div className="dashboard-grid">
@@ -111,13 +78,13 @@ export default function OverviewTab({ user }) {
                             <div style={{
                                 fontSize: '1.5rem',
                                 fontWeight: '800',
-                                color: (netWorth - 100000) >= 0 ? 'var(--accent-green)' : 'var(--accent-red)',
+                                color: totalPL >= 0 ? 'var(--accent-green)' : 'var(--accent-red)',
                                 fontFamily: 'var(--font-mono)'
                             }}>
-                                {(netWorth - 100000) >= 0 ? '+' : ''}₹{(netWorth - 100000).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {totalPL >= 0 ? '+' : ''}₹{totalPL.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
-                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: (netWorth - 100000) >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', opacity: 0.8 }}>
-                                {(netWorth - 100000) >= 0 ? '+' : ''}{((netWorth - 100000) / 1000).toFixed(2)}%
+                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: totalPL >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', opacity: 0.8 }}>
+                                {totalPL >= 0 ? '+' : ''}{totalPLPct.toFixed(2)}%
                             </div>
                         </div>
                         <div>
@@ -134,7 +101,13 @@ export default function OverviewTab({ user }) {
                     <div className="live-badge">LIVE <div className="live-dot"></div></div>
                 </div>
                 <div style={{ padding: '0', height: '280px' }}>
-                    <StockChart symbol="PORTFOLIO" range="1mo" />
+                    <StockChart
+                        symbol="PORTFOLIO"
+                        range="1d"
+                        holdings={holdings}
+                        trades={user.trades}
+                        currentBalance={balance}
+                    />
                 </div>
             </div>
 
@@ -189,7 +162,12 @@ export default function OverviewTab({ user }) {
             <div className="card sentiment-card">
                 <div className="card-header">
                     <h3>Market Sentiment</h3>
-                    <i className="fa-solid fa-gauge-high" style={{ color: 'var(--accent-magenta)' }}></i>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.65rem', opacity: 0.7, background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>
+                            {sentiment.confidence || 'Mod'} Conf.
+                        </span>
+                        <i className="fa-solid fa-gauge-high" style={{ color: 'var(--accent-magenta)' }}></i>
+                    </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center', padding: '10px 20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.75rem', fontWeight: '700' }}>
@@ -200,13 +178,12 @@ export default function OverviewTab({ user }) {
                         <div style={{ width: `${sentiment.bullish}%`, background: 'var(--accent-green)', transition: 'width 1s ease' }}></div>
                         <div style={{ width: `${sentiment.bearish}%`, background: 'var(--accent-red)', transition: 'width 1s ease' }}></div>
                     </div>
-                    <p style={{ marginTop: '10px', fontSize: '0.7rem', opacity: 0.6, lineHeight: '1.4' }}>
-                        {sentiment.bullish > 60 ?
-                            "High confidence in momentum. Market breadth is positive." :
-                            "Market is in a consolidation phase. Selective buying advised."}
+                    <p style={{ marginTop: '15px', fontSize: '0.75rem', opacity: 0.8, lineHeight: '1.4', borderLeft: '2px solid var(--accent-cyan)', paddingLeft: '10px' }}>
+                        {sentiment.reason || "Market is in a consolidation phase. Selective buying advised."}
                     </p>
                 </div>
             </div>
         </div>
     );
 }
+

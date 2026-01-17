@@ -18,7 +18,7 @@ export default async function Home() {
         include: {
             portfolio: true,
             trades: {
-                take: 5,
+                take: 50,
                 orderBy: { timestamp: 'desc' }
             }
         }

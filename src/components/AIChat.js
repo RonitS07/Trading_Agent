@@ -47,7 +47,13 @@ const ActionPlanner = {
         }
 
         // Strategy queries with a selected stock
-        if (stock && (goal.includes("buy") || goal.includes("sell") || goal.includes("strategy") || goal.includes("plan") || goal.includes("trade") || goal.includes("target"))) {
+        if (stock && (
+            goal.includes("buy") || goal.includes("sell") || goal.includes("strategy") ||
+            goal.includes("plan") || goal.includes("trade") || goal.includes("target") ||
+            goal.includes("tell") || goal.includes("about") || goal.includes("review") ||
+            goal.includes("predict") || goal.includes("forecast") || goal.includes("outlook") ||
+            goal.includes("analysis") || goal.includes("thoughts")
+        )) {
             const price = stock.price || 0;
             const change = stock.changePct || 0;
             let horizon = "SWING";
@@ -114,6 +120,7 @@ export default function AIChat({ selectedStockData, user }) {
         { role: 'ai', content: 'TradePilot AI Strategy Engine online. How can I assist with your portfolio today?' }
     ]);
     const [input, setInput] = useState('');
+    const [isThinking, setIsThinking] = useState(false);
     const chatEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -132,6 +139,7 @@ export default function AIChat({ selectedStockData, user }) {
         setMessages(prev => [...prev, userMsg]);
         const currentInput = input;
         setInput('');
+        setIsThinking(true);
 
         // Symbol detection (simple regex for common Indian patterns or single words)
         const words = currentInput.toUpperCase().replace(/[?!.]/g, '').split(/\s+/);
@@ -140,22 +148,32 @@ export default function AIChat({ selectedStockData, user }) {
 
         // Simulate AI thinking
         setTimeout(async () => {
+            setIsThinking(false);
             try {
                 let contextStock = selectedStockData;
 
                 // If the user mentioned a symbol, try to fetch its data if needed
-                if (potentialSymbol && (!selectedStockData || !selectedStockData.symbol.includes(potentialSymbol))) {
-                    try {
-                        const searchRes = await fetch(`/api/search?q=${potentialSymbol}`);
-                        const searchData = await searchRes.json();
-                        if (searchData.length > 0) {
-                            const exactSymbol = searchData[0].symbol;
-                            const quoteRes = await fetch(`/api/quote?symbol=${exactSymbol}`);
-                            contextStock = await quoteRes.json();
+                if (potentialSymbol) {
+                    // Only fetch if it differs from context or context is missing
+                    if (!selectedStockData || !selectedStockData.symbol.includes(potentialSymbol)) {
+                        try {
+                            const searchRes = await fetch(`/api/search?q=${potentialSymbol}`);
+                            const searchData = await searchRes.json();
+                            if (searchData.length > 0) {
+                                const exactSymbol = searchData[0].symbol;
+                                const quoteRes = await fetch(`/api/quote?symbol=${exactSymbol}`);
+                                contextStock = await quoteRes.json();
+                            } else {
+                                // CASE: Symbol mentioned but not found.
+                                // STOP here. Do not fallback to selectedStockData, as that is confusing.
+                                setMessages(prev => [...prev, { role: 'ai', content: `<p>I couldn't identify market data for <strong>${potentialSymbol}</strong>. Please try using the correct NSE ticker symbol.</p>` }]);
+                                return;
+                            }
+                        } catch (err) {
+                            // On network error also stop
+                            setMessages(prev => [...prev, { role: 'ai', content: `<p>Comparison data unavailable at the moment.</p>` }]);
+                            return;
                         }
-                    } catch (err) {
-                        // Silent warning
-                        // console.warn("Auto-symbol lookup failed:", err);
                     }
                 }
 
@@ -188,6 +206,18 @@ export default function AIChat({ selectedStockData, user }) {
         }, 600);
     };
 
+    const suggestions = [
+        "Analyze my portfolio health",
+        "Market sentiment outlook",
+        "Strategy for RELIANCE",
+        "Risk management advice"
+    ];
+
+    const handleSuggestionClick = (suggestion) => {
+        setInput(suggestion);
+        // Optional: auto-submit or let user edit
+    };
+
     return (
         <div className="ai-planner-view">
             <div className="chat-container-modern">
@@ -199,12 +229,48 @@ export default function AIChat({ selectedStockData, user }) {
                 </div>
                 <div className="chat-history-v2">
                     {messages.map((m, i) => (
-                        <div key={i} className={`chat-bubble-v2 ${m.role}`}>
+                        <div key={i} className={`chat-bubble-v2 ${m.role}`} style={{ animationDelay: `${i * 0.1}s` }}>
                             <div className="bubble-content" dangerouslySetInnerHTML={{ __html: m.content }}></div>
                         </div>
                     ))}
+                    {isThinking && (
+                        <div className="chat-bubble-v2 ai thinking">
+                            <div className="bubble-content">
+                                <div className="thinking-dots">
+                                    <span></span><span></span><span></span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     <div ref={chatEndRef} />
                 </div>
+
+                {/* Suggestion Chips */}
+                <div style={{ display: 'flex', gap: '8px', padding: '10px 15px', overflowX: 'auto', background: 'rgba(15, 23, 42, 0.3)', msOverflowStyle: 'none', scrollbarWidth: 'none' }} className="no-scrollbar-chips">
+                    <style jsx>{`
+                        .no-scrollbar-chips::-webkit-scrollbar { display: none; }
+                    `}</style>
+                    {suggestions.map((s, i) => (
+                        <button
+                            key={i}
+                            onClick={() => handleSuggestionClick(s)}
+                            style={{
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '15px',
+                                padding: '6px 12px',
+                                color: 'var(--accent-cyan)',
+                                fontSize: '0.75rem',
+                                whiteSpace: 'nowrap',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease'
+                            }}
+                        >
+                            {s}
+                        </button>
+                    ))}
+                </div>
+
                 <form className="chat-input-v2" onSubmit={handleSend}>
                     <input
                         type="text"

@@ -24,16 +24,32 @@ export async function GET(request) {
             if (!result) return null;
 
             const meta = result.meta || {};
-            const price = meta.regularMarketPrice || 0;
+            const indicators = result.indicators?.quote?.[0] || {};
+            const prices = indicators.close || [];
+            const highs = indicators.high || [];
+            const lows = indicators.low || [];
+            const opens = indicators.open || [];
+
+            const validPrices = prices.filter(p => p !== null);
+            const validHighs = highs.filter(h => h !== null);
+            const validLows = lows.filter(l => l !== null);
+            const validOpens = opens.filter(o => o !== null);
+
+            const price = meta.regularMarketPrice || validPrices[validPrices.length - 1] || 0;
             const prev = meta.previousClose || 1;
+
+            // Robust stats: fallback to chart extremes if meta is missing
+            const high = meta.regularMarketDayHigh || (validHighs.length > 0 ? Math.max(...validHighs) : (price || 0));
+            const low = meta.regularMarketDayLow || (validLows.length > 0 ? Math.min(...validLows) : (price || 0));
+            const open = meta.regularMarketOpen || (validOpens.length > 0 ? validOpens[0] : (price || 0));
 
             return {
                 symbol: meta.symbol,
                 price: price,
                 changePct: prev ? ((price - prev) / prev) * 100 : 0,
-                high: meta.regularMarketDayHigh || 0,
-                low: meta.regularMarketDayLow || 0,
-                open: meta.regularMarketOpen || 0,
+                high: high,
+                low: low,
+                open: open,
                 prevClose: prev,
                 volume: meta.regularMarketVolume || 0,
                 currency: meta.currency
