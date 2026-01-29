@@ -15,9 +15,38 @@ model User {
   balance   Float    @default(100000)
   createdAt DateTime @default(now())
 
+  watchlist Watchlist[]
   portfolio Portfolio[]
   trades    Trade[]
   history   History[]
+}
+
+model Watchlist {
+  id        String   @id @default(cuid())
+  userId    String
+  symbol    String
+  
+  user      User     @relation(fields: [userId], references: [id])
+  
+  @@unique([userId, symbol])
+}
+
+model Trade {
+  id          String   @id @default(cuid())
+  userId      String
+  symbol      String
+  action      String   // BUY or SELL
+  type        String   @default("MARKET") // MARKET, LIMIT, SL
+  price       Float    // Execution price
+  limitPrice  Float?   // For Limit orders
+  stopPrice   Float?   // For SL orders
+  targetPrice Float?   // Optional Target
+  qty         Int
+  cost        Float    // Total cost including tax
+  status      String   @default("EXECUTED") // OPEN, EXECUTED, CANCELLED
+  timestamp   DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Portfolio {
@@ -30,19 +59,6 @@ model Portfolio {
   user      User     @relation(fields: [userId], references: [id])
   
   @@unique([userId, symbol])
-}
-
-model Trade {
-  id        String   @id @default(cuid())
-  userId    String
-  symbol    String
-  action    String   // BUY or SELL
-  price     Float
-  qty       Int
-  cost      Float    // Total cost including tax
-  timestamp DateTime @default(now())
-  
-  user      User     @relation(fields: [userId], references: [id])
 }
 
 model History {

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import StockChart from './StockChart';
 import { usePortfolioData } from '@/hooks/usePortfolioData';
 
-export default function OverviewTab({ user }) {
+export default function OverviewTab({ user, onSelectStock }) {
     const {
         quotes,
         holdings,
@@ -131,6 +131,7 @@ export default function OverviewTab({ user }) {
                                         <th style={{ padding: '8px' }}>QTY</th>
                                         <th style={{ padding: '8px' }}>AVG</th>
                                         <th style={{ padding: '8px' }}>LTP</th>
+                                        <th style={{ padding: '8px', textAlign: 'right' }}>P&L</th>
                                         <th style={{ padding: '8px', textAlign: 'right' }}>VALUATION</th>
                                     </tr>
                                 </thead>
@@ -138,13 +139,25 @@ export default function OverviewTab({ user }) {
                                     {holdings.map(h => {
                                         const ltp = quotes[h.symbol]?.price || 0;
                                         const val = h.qty * (ltp || h.avgCost);
+                                        const invested = h.qty * h.avgCost;
+                                        const pnl = val - invested;
+                                        const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
                                         return (
-                                            <tr key={h.symbol} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem' }}>
+                                            <tr
+                                                key={h.symbol}
+                                                onClick={() => onSelectStock && onSelectStock(h.symbol)}
+                                                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.8rem', cursor: onSelectStock ? 'pointer' : 'default', transition: 'background 0.2s' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                            >
                                                 <td style={{ padding: '8px 10px', fontWeight: '700' }}>{h.symbol}</td>
                                                 <td style={{ padding: '8px 10px' }}>{h.qty}</td>
                                                 <td style={{ padding: '8px 10px', fontFamily: 'var(--font-mono)' }}>{h.avgCost.toFixed(2)}</td>
                                                 <td style={{ padding: '8px 10px', fontFamily: 'var(--font-mono)', color: ltp >= h.avgCost ? 'var(--accent-green)' : 'var(--accent-red)' }}>
                                                     {ltp ? ltp.toFixed(2) : '...'}
+                                                </td>
+                                                <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)', fontWeight: '600' }}>
+                                                    {pnl >= 0 ? '+' : ''}₹{pnl.toFixed(2)} ({pnl >= 0 ? '+' : ''}{pnlPct.toFixed(2)}%)
                                                 </td>
                                                 <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)' }}>
                                                     ₹{val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

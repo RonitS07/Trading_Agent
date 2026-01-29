@@ -1,11 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function TradePanel({ symbol, user, onTradeComplete, marketStatus }) {
     const router = useRouter();
     const [qty, setQty] = useState(1);
+
+    // Advanced Order State
+    const [orderType, setOrderType] = useState('MARKET'); // MARKET, LIMIT, SL
+    const [limitPrice, setLimitPrice] = useState('');
+    const [stopPrice, setStopPrice] = useState('');
+    const [targetPrice, setTargetPrice] = useState('');
+
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
 
@@ -13,6 +20,24 @@ export default function TradePanel({ symbol, user, onTradeComplete, marketStatus
     const [confirmingAction, setConfirmingAction] = useState(null);
     const [tradeStatus, setTradeStatus] = useState('idle'); // idle, loading, success, error
     const [statusMessage, setStatusMessage] = useState('');
+
+    // Shortcut Listener
+    useEffect(() => {
+        const handleShortcut = (e) => {
+            if (e.detail === 'BUY') onActionClick('BUY');
+            if (e.detail === 'SELL') onActionClick('SELL');
+        };
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') setConfirmingAction(null);
+        };
+
+        window.addEventListener('trade-shortcut', handleShortcut);
+        window.addEventListener('keydown', handleEsc);
+        return () => {
+            window.removeEventListener('trade-shortcut', handleShortcut);
+            window.removeEventListener('keydown', handleEsc);
+        };
+    }, []);
 
     const onActionClick = (action) => {
         setTradeStatus('idle');
@@ -38,7 +63,17 @@ export default function TradePanel({ symbol, user, onTradeComplete, marketStatus
             const res = await fetch('/api/trade', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id, symbol, action, qty: parseInt(qty), password })
+                body: JSON.stringify({
+                    userId: user.id,
+                    symbol,
+                    action,
+                    qty: parseInt(qty),
+                    password,
+                    type: orderType,
+                    limitPrice: limitPrice ? parseFloat(limitPrice) : null,
+                    stopPrice: stopPrice ? parseFloat(stopPrice) : null,
+                    targetPrice: targetPrice ? parseFloat(targetPrice) : null
+                })
             });
             const data = await res.json();
 
@@ -199,16 +234,93 @@ export default function TradePanel({ symbol, user, onTradeComplete, marketStatus
                 </div>
             )}
 
+
+            {/* Order Type Selector */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
+                {['MARKET', 'LIMIT', 'SL'].map(type => (
+                    <button
+                        key={type}
+                        onClick={() => {
+                            // Reset optional fields on type change
+                            if (type === 'MARKET') {
+                                setLimitPrice('');
+                                setStopPrice('');
+                            }
+                            setOrderType(type);
+                        }}
+                        style={{
+                            flex: 1,
+                            padding: '8px',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            background: orderType === type ? 'var(--accent-cyan)' : 'transparent',
+                            color: orderType === type ? 'black' : 'rgba(255,255,255,0.6)',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        {type}
+                    </button>
+                ))}
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '1.5rem' }}>
-                <label style={{ fontSize: '0.65rem', fontWeight: '700', opacity: 0.6, letterSpacing: '1px' }}>QUANTITY</label>
-                <input
-                    type="number"
-                    value={qty}
-                    onChange={e => setQty(e.target.value)}
-                    min="1"
-                    className="trade-input"
-                    style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '0.8rem', borderRadius: '8px', outline: 'none', width: '100%' }}
-                />
+                {/* Dynamic Inputs based on Order Type */}
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '0.65rem', fontWeight: '700', opacity: 0.6, letterSpacing: '1px' }}>QUANTITY</label>
+                        <input
+                            type="number"
+                            value={qty}
+                            onChange={e => setQty(e.target.value)}
+                            min="1"
+                            className="trade-input"
+                            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '0.8rem', borderRadius: '8px', outline: 'none', width: '100%', marginTop: '4px' }}
+                        />
+                    </div>
+                    {orderType !== 'MARKET' && (
+                        <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '0.65rem', fontWeight: '700', opacity: 0.6, letterSpacing: '1px' }}>
+                                {orderType === 'LIMIT' ? 'LIMIT PRICE' : 'TRIGGER PRICE'}
+                            </label>
+                            <input
+                                type="number"
+                                value={limitPrice}
+                                onChange={e => setLimitPrice(e.target.value)}
+                                placeholder="0.00"
+                                className="trade-input"
+                                style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '0.8rem', borderRadius: '8px', outline: 'none', width: '100%', marginTop: '4px' }}
+                            />
+                        </div>
+                    )}
+                </div>
+
+                {/* SL & Target (Optional for all, but typical for advanced) */}
+                <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+                    <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '0.65rem', fontWeight: '700', opacity: 0.6, letterSpacing: '1px' }}>STOP LOSS (Opt)</label>
+                        <input
+                            type="number"
+                            value={stopPrice}
+                            onChange={e => setStopPrice(e.target.value)}
+                            placeholder="Price"
+                            className="trade-input"
+                            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '0.8rem', borderRadius: '8px', outline: 'none', width: '100%', marginTop: '4px' }}
+                        />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '0.65rem', fontWeight: '700', opacity: 0.6, letterSpacing: '1px' }}>TARGET (Opt)</label>
+                        <input
+                            type="number"
+                            value={targetPrice}
+                            onChange={e => setTargetPrice(e.target.value)}
+                            placeholder="Price"
+                            className="trade-input"
+                            style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '0.8rem', borderRadius: '8px', outline: 'none', width: '100%', marginTop: '4px' }}
+                        />
+                    </div>
+                </div>
             </div>
 
             <div style={{ display: 'flex', gap: '1rem' }}>

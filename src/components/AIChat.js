@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-// Enhanced contextual logic
+// Constant for symbol detection
+const STOP_WORDS = ['THE', 'FOR', 'AND', 'WHAT', 'SELL', 'BUY', 'WITH', 'YOUR', 'THIS', 'THAT', 'FROM', 'HOW', 'PRICE', 'CHART', 'STOCK', 'PLANS', 'SHOULD', 'ABOUT'];
 const ActionPlanner = {
     TEMPLATES: {
         OPENINGS: [
@@ -141,10 +142,32 @@ export default function AIChat({ selectedStockData, user }) {
         setInput('');
         setIsThinking(true);
 
-        // Symbol detection (simple regex for common Indian patterns or single words)
+        // Improved symbol detection: only trigger if it's clearly a ticker query
         const words = currentInput.toUpperCase().replace(/[?!.]/g, '').split(/\s+/);
-        const stopWords = ['THE', 'FOR', 'AND', 'WHAT', 'SELL', 'BUY', 'WITH', 'YOUR', 'THIS', 'THAT', 'FROM', 'HOW', 'PRICE', 'CHART', 'STOCK', 'PLANS', 'SHOULD', 'ABOUT'];
-        const potentialSymbol = words.find(w => w.length >= 3 && w.length <= 10 && !stopWords.includes(w));
+
+        // Check if this is a clear ticker symbol query:
+        // 1. Single word query (e.g., "RELIANCE"), OR
+        // 2. Contains buy/sell keywords with a symbol-like word
+        const isSingleWord = words.length === 1;
+        const hasBuySellKeyword = currentInput.toLowerCase().includes('buy ') ||
+            currentInput.toLowerCase().includes('sell ') ||
+            currentInput.toLowerCase().includes('strategy for ') ||
+            currentInput.toLowerCase().includes('about ');
+
+        let potentialSymbol = null;
+
+        // Only look for symbols if it's a single word OR has buy/sell context
+        if (isSingleWord && words[0].length >= 3 && words[0].length <= 10 && !STOP_WORDS.includes(words[0])) {
+            potentialSymbol = words[0];
+        } else if (hasBuySellKeyword) {
+            // Find the most likely symbol (all caps, 3-10 chars, not a stop word)
+            potentialSymbol = words.find(w =>
+                w.length >= 3 &&
+                w.length <= 10 &&
+                !STOP_WORDS.includes(w) &&
+                w === w.toUpperCase() // Must be all uppercase
+            );
+        }
 
         // Simulate AI thinking
         setTimeout(async () => {

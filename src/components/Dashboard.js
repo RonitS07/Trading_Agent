@@ -28,14 +28,19 @@ export default function Dashboard({ initialUser }) {
         } catch (e) { /* silent */ }
     };
 
-    const handleLogout = () => {
+    const handleProfileRedirect = () => {
         router.push('/profile');
+    };
+
+    const handleLogout = () => {
+        // Force hard redirect to clear state
+        window.location.href = '/api/auth/signout';
     };
 
     if (!hasMounted) return null;
 
     if (isMobile) {
-        return <MobileTerminal user={user} onLogout={handleLogout} onTradeComplete={handleTradeComplete} />;
+        return <MobileTerminal user={user} onProfile={handleProfileRedirect} onLogout={handleLogout} onTradeComplete={handleTradeComplete} />;
     }
 
     return <DesktopTerminal user={user} onTradeComplete={handleTradeComplete} />;

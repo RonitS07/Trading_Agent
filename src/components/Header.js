@@ -1,6 +1,8 @@
+'use client';
+
 import { useRouter } from 'next/navigation';
 
-export default function Header({ user, activeTab, setActiveTab }) {
+export default function Header({ user, activeTab, setActiveTab, marketStatus }) {
     const router = useRouter();
     return (
         <header className="top-header">
@@ -22,15 +24,20 @@ export default function Header({ user, activeTab, setActiveTab }) {
                     <button className={`nav-btn ${activeTab === 'planner' ? 'active' : ''}`} onClick={() => setActiveTab('planner')}>
                         <i className="fa-solid fa-brain"></i> AI Planner
                     </button>
-                    <button className={`nav-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => router.push('/profile')}>
+                    <button className="nav-btn" onClick={() => router.push('/profile')}>
                         <i className="fa-solid fa-user-gear"></i> Profile
                     </button>
                 </nav>
 
                 <div className="header-actions">
-                    <div id="market-status-badge" className="market-tag">NSE/BSE LIVE</div>
+                    {marketStatus && !marketStatus.open ? (
+                        <div id="market-status-badge" className="market-tag closed" style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid rgba(239, 68, 68, 0.5)', color: '#f87171' }}>MARKET CLOSED</div>
+                    ) : (
+                        <div id="market-status-badge" className="market-tag">NSE/BSE LIVE</div>
+                    )}
                     <div
                         className="user-avatar"
+                        onClick={() => router.push('/profile')}
                         style={{
                             border: '2px solid var(--accent-cyan)',
                             display: 'flex',
@@ -38,7 +45,8 @@ export default function Header({ user, activeTab, setActiveTab }) {
                             justifyContent: 'center',
                             background: 'rgba(6, 182, 212, 0.1)',
                             fontWeight: '600',
-                            marginLeft: '15px'
+                            marginLeft: '15px',
+                            cursor: 'pointer'
                         }}
                     >
                         {user?.name?.[0] || <i className="fa-solid fa-user"></i>}

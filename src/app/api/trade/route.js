@@ -18,7 +18,7 @@ async function getCurrentPrice(symbol) {
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { userId, symbol, action, qty, password } = body;
+        const { userId, symbol, action, qty, password, type = 'MARKET', limitPrice, stopPrice, targetPrice } = body;
 
         if (!userId || !symbol || !action || !qty || qty <= 0) {
             return NextResponse.json({ error: 'Invalid trade params' }, { status: 400 });
@@ -43,8 +43,32 @@ export async function POST(request) {
         const price = await getCurrentPrice(symbol);
         if (!price) return NextResponse.json({ error: 'Market data unavailable' }, { status: 503 });
 
-        // 3. Calculate Values
-        const totalValue = price * qty;
+        // LIMIT ORDER CHECK
+        let status = 'EXECUTED';
+        let execPrice = price;
+
+        if (type === 'LIMIT' && limitPrice) {
+            const isBuy = action === 'BUY';
+            const conditionMet = isBuy ? (price <= limitPrice) : (price >= limitPrice);
+
+            if (conditionMet) {
+                execPrice = limitPrice; // Execute at limit price (or better, but for simplicity we use Limit)
+                // Realistically exchange gives you best available. Here we assume you get your Limit.
+            } else {
+                status = 'OPEN';
+                execPrice = limitPrice; // Store intended price
+            }
+        } else if (type === 'SL' && stopPrice) {
+            // Basic Stop Loss logic (Trigger not met yet usually)
+            // If Current Price > SL (Buy), we wait? No, SL is usually sell below X.
+            // Let's assume SL is entered as a Pending Stop Order.
+            status = 'OPEN';
+            execPrice = stopPrice;
+        }
+
+        // 3. Calculate Values (Block funds based on Limit Price)
+        const totalValue = execPrice * qty;
+
         // Taxes (approximate for India)
         const stt = totalValue * 0.001;
         const otherCharges = totalValue * 0.0005;
@@ -84,52 +108,53 @@ export async function POST(request) {
                     userId,
                     symbol,
                     action,
-                    price,
+                    price: execPrice,
                     qty,
-                    cost: taxes // Store taxes/fees cost? Schema says 'cost'. Or total spent? 
-                    // Schema comment says "Total cost including tax". 
-                    // For SELL, it's confusing. Let's store the Transaction Amount (Total)
-                    // Actually, let's follow the schema intent.
+                    cost: taxes,
+                    type,
+                    limitPrice,
+                    stopPrice,
+                    targetPrice,
+                    status // OPEN or EXECUTED
                 }
             });
 
-            // Update Portfolio
-            const existing = user.portfolio.find(p => p.symbol === symbol);
-            if (action === 'BUY') {
-                if (existing) {
-                    const totalQty = existing.qty + qty;
-                    const totalCostBasis = (existing.qty * existing.avgCost) + totalValue; // Avg cost usually excludes tax for P&L, but includes for tax purposes? 
-                    // Let's stick to gross price for metrics simplicity
-                    const newAvg = totalCostBasis / totalQty;
+            // Update Portfolio ONLY if EXECUTED
+            if (status === 'EXECUTED') {
+                const existing = user.portfolio.find(p => p.symbol === symbol);
+                if (action === 'BUY') {
+                    if (existing) {
+                        const totalQty = existing.qty + qty;
+                        const totalCostBasis = (existing.qty * existing.avgCost) + totalValue;
+                        const newAvg = totalCostBasis / totalQty;
 
-                    await tx.portfolio.update({
-                        where: { id: existing.id },
-                        data: { qty: totalQty, avgCost: newAvg }
-                    });
+                        await tx.portfolio.update({
+                            where: { id: existing.id },
+                            data: { qty: totalQty, avgCost: newAvg }
+                        });
+                    } else {
+                        await tx.portfolio.create({
+                            data: { userId, symbol, qty, avgCost: execPrice }
+                        });
+                    }
                 } else {
-                    await tx.portfolio.create({
-                        data: { userId, symbol, qty, avgCost: price }
-                    });
+                    // SELL (Assuming holdings check passed)
+                    const newQty = existing.qty - qty;
+                    if (newQty === 0) {
+                        await tx.portfolio.delete({ where: { id: existing.id } });
+                    } else {
+                        await tx.portfolio.update({
+                            where: { id: existing.id },
+                            data: { qty: newQty }
+                        });
+                    }
                 }
-            } else {
-                // SELL
-                const newQty = existing.qty - qty;
-                if (newQty === 0) {
-                    await tx.portfolio.delete({ where: { id: existing.id } });
-                } else {
-                    await tx.portfolio.update({
-                        where: { id: existing.id },
-                        data: { qty: newQty } // Avg cost doesn't change on sell
-                    });
-                }
-
-                // Record Realized P&L in History? (Not in this simple logic yet)
             }
 
-            return { newBalance };
+            return { newBalance, status };
         });
 
-        return NextResponse.json({ success: true, balance: result.newBalance, price });
+        return NextResponse.json({ success: true, balance: result.newBalance, status: result.status, price });
 
     } catch (error) {
         // console.error("Trade Error:", error);
