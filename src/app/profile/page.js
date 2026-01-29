@@ -29,12 +29,20 @@ export default function ProfilePage() {
         }
     }, [session]);
 
+    // Experience Logic
+    const totalTrades = stats?.totalTrades || 0;
+    let level = 'BEGINNER';
+    let progress = 10;
+    if (totalTrades > 5) { level = 'INTERMEDIATE'; progress = 40; }
+    if (totalTrades > 25) { level = 'ADVANCED'; progress = 75; }
+    if (totalTrades > 100) { level = 'PRO'; progress = 100; }
+
     if (!session) return <div>Loading...</div>;
 
     return (
         <div className="pro-theme">
 
-            {!isMobile && <Header user={session.user} activeTab="profile" setActiveTab={() => router.push('/')} />}
+            {!isMobile && <Header user={session.user} activeTab="profile" setActiveTab={(t) => router.push(`/?tab=${t}`)} />}
 
             {isMobile && (
                 <div style={{ padding: '15px', display: 'flex', alignItems: 'center' }}>
@@ -92,10 +100,10 @@ export default function ProfilePage() {
                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '25px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.75rem', fontWeight: '700' }}>
                                 <span style={{ color: 'var(--accent-cyan)' }}>EXPERIENCE LEVEL</span>
-                                <span>ADVANCED</span>
+                                <span>{level}</span>
                             </div>
                             <div style={{ height: '6px', background: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                                <div style={{ width: '85%', height: '100%', background: 'linear-gradient(90deg, var(--accent-blue), var(--accent-cyan))', boxShadow: '0 0 10px var(--accent-cyan)' }}></div>
+                                <div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent-blue), var(--accent-cyan))', boxShadow: '0 0 10px var(--accent-cyan)', transition: 'width 1s ease' }}></div>
                             </div>
                             <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
                                 <span style={{ fontSize: '0.65rem', background: '#000', padding: '4px 8px', borderRadius: '4px', color: '#94a3b8', border: '1px solid #334155' }}>OPTIONS TRADING</span>

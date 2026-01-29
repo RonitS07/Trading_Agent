@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import AIChat from './AIChat';
 import { ChartSkeleton } from './LoadingSkeleton';
 
-import { usePortfolioData } from '@/hooks/usePortfolioData';
+import { usePortfolioContext } from '@/components/Providers';
 import { useLivePrices } from '@/hooks/useLivePrices';
 
 // Dynamic imports for code splitting and lazy loading
@@ -48,7 +48,7 @@ export default function MobileTerminal({ user, onProfile, onLogout, onTradeCompl
         balance,
         marketStatus,
         isLoading: portfolioLoading
-    } = usePortfolioData(user);
+    } = usePortfolioContext();
 
     // Search State
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -106,7 +106,7 @@ export default function MobileTerminal({ user, onProfile, onLogout, onTradeCompl
     };
 
     return (
-        <div className="mobile-app-theme" style={{ background: '#020617', color: 'white', minHeight: '100vh', paddingBottom: '80px', position: 'relative', fontFamily: 'Inter, sans-serif' }}>
+        <div className="mobile-app-theme" style={{ color: 'white', minHeight: '100vh', paddingBottom: '80px', position: 'relative', fontFamily: 'Inter, sans-serif' }}>
             {/* Header */}
             <header className="m-top-bar" style={{ padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(2, 6, 23, 0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)', position: 'sticky', top: 0, zIndex: 50 }}>
                 <div

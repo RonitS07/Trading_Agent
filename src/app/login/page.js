@@ -1,21 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './login.module.css';
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [isLogin, setIsLogin] = useState(true);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
+    const [showWelcome, setShowWelcome] = useState(false);
     const [form, setForm] = useState({ email: '', password: '', name: '' });
+
+    useEffect(() => {
+        if (searchParams.get('error')) {
+            setError(searchParams.get('error'));
+        }
+        if (searchParams.get('message')) {
+            setSuccessMsg(searchParams.get('message'));
+        }
+    }, [searchParams]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
+        setSuccessMsg('');
 
         try {
             if (isLogin) {
@@ -26,8 +39,11 @@ export default function LoginPage() {
                 });
 
                 if (res?.error) throw new Error("Invalid credentials");
-                router.push('/');
-                router.refresh();
+                setSuccessMsg("ACCESS GRANTED. INITIALIZING...");
+                setTimeout(() => {
+                    router.push('/');
+                    router.refresh();
+                }, 800);
             } else {
                 const res = await fetch('/api/register', {
                     method: 'POST',
@@ -44,8 +60,9 @@ export default function LoginPage() {
                     email: form.email,
                     password: form.password
                 });
-                router.push('/');
-                router.refresh();
+
+                // Show Welcome Mission Briefing instead of direct redirect
+                setShowWelcome(true);
             }
         } catch (err) {
             setError(err.message);
@@ -54,8 +71,35 @@ export default function LoginPage() {
         }
     };
 
+    const handleEnterTerminal = () => {
+        router.push('/');
+        router.refresh();
+    };
+
     return (
         <div className={styles.container}>
+            {showWelcome && (
+                <div className={styles.welcomeOverlay}>
+                    <div className={styles.welcomeCard}>
+                        <div className={styles.missionHeader}>MISSION BRIEFING</div>
+                        <div className={styles.avatarBig}>{form.name?.[0] || 'A'}</div>
+                        <h2>Agent {form.name}</h2>
+                        <p>Identity established successfully.</p>
+                        <div className={styles.briefBox}>
+                            <div className={styles.briefLabel}>INITIAL ALLOCATION</div>
+                            <div className={styles.briefValue}>₹1,00,000.00</div>
+                            <div className={styles.briefSub}>VIRTUAL CAPITAL</div>
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '15px' }}>
+                            Your objective is to maximize portfolio value through strategic equity trading.
+                        </p>
+                        <button className={styles.btnLaunch} onClick={handleEnterTerminal}>
+                            ENTER TERMINAL
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className={styles.loginCard}>
                 <div className={styles.logoBox}>
                     <i className="fa-solid fa-bolt"></i>
@@ -64,13 +108,13 @@ export default function LoginPage() {
                     TRADE<span style={{ color: '#06b6d4' }}>PILOT</span>
                 </span>
                 <div className={styles.brandSubtitle}>
-                    {isLogin ? 'Access Terminal' : 'Create Account'}
+                    {isLogin ? 'Secure Terminal Access' : 'New Identity Creation'}
                 </div>
 
                 <form onSubmit={handleSubmit}>
                     {!isLogin && (
                         <div className={styles.inputGroup}>
-                            <label>Full Name</label>
+                            <label>Designation (Name)</label>
                             <input
                                 type="text"
                                 required
@@ -80,7 +124,7 @@ export default function LoginPage() {
                         </div>
                     )}
                     <div className={styles.inputGroup}>
-                        <label>Email Access ID</label>
+                        <label>Access ID (Email)</label>
                         <input
                             type="email"
                             required
@@ -89,7 +133,7 @@ export default function LoginPage() {
                         />
                     </div>
                     <div className={styles.inputGroup}>
-                        <label>Security PIN / Password</label>
+                        <label>Passkey</label>
                         <input
                             type="password"
                             required
@@ -98,14 +142,15 @@ export default function LoginPage() {
                         />
                     </div>
                     <button type="submit" className={styles.btnLogin} disabled={loading}>
-                        {loading ? 'Processing...' : (isLogin ? 'INITIALIZE TERMINAL' : 'CREATE ACCOUNT')}
+                        {loading ? 'SYNCING...' : (isLogin ? 'INITIALIZE IDENTITY' : 'ESTABLISH LINK')}
                     </button>
                 </form>
 
                 {error && <div className={styles.errorMsg}>{error}</div>}
+                {successMsg && <div className={styles.successMsg}>{successMsg}</div>}
 
                 <p style={{ marginTop: '1.5rem', fontSize: '0.9rem', color: '#94a3b8', cursor: 'pointer' }}
-                    onClick={() => setIsLogin(!isLogin)}>
+                    onClick={() => { setIsLogin(!isLogin); setError(''); setSuccessMsg(''); }}>
                     {isLogin ? "New user? Create account" : "Already have ID? Login"}
                 </p>
 
@@ -114,5 +159,13 @@ export default function LoginPage() {
                 </footer>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className={styles.container}>Loading Interface...</div>}>
+            <LoginForm />
+        </Suspense>
     );
 }

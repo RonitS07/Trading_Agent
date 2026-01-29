@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import StockChart from './StockChart';
-import { usePortfolioData } from '@/hooks/usePortfolioData';
+import { usePortfolioContext } from '@/components/Providers';
 
 export default function OverviewTab({ user, onSelectStock }) {
     const {
@@ -15,7 +15,7 @@ export default function OverviewTab({ user, onSelectStock }) {
         balance,
         totalPL,
         totalPLPct
-    } = usePortfolioData(user);
+    } = usePortfolioContext();
 
     const [sentiment, setSentiment] = useState({ bullish: 65, bearish: 35 });
 

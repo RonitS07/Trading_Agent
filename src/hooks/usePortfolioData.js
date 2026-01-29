@@ -80,7 +80,6 @@ export function usePortfolioData(user) {
 
     // 3. Derived Math
     const calculateTotals = () => {
-        const initialCapital = 100000;
         let invested = 0;
         let valuation = 0;
 
@@ -94,8 +93,10 @@ export function usePortfolioData(user) {
         const unrealizedPLPct = invested > 0 ? (unrealizedPL / invested) * 100 : 0;
         const netWorth = balance + valuation;
 
-        const totalPL = netWorth - initialCapital;
-        const totalPLPct = (totalPL / initialCapital) * 100;
+        // "Total P&L" on dashboard will now reflect the performance of the current portfolio
+        // This avoids confusion with "Account P&L" which requires tracking all historical deposits/withdrawals
+        const totalPL = unrealizedPL;
+        const totalPLPct = unrealizedPLPct;
 
         return {
             invested,

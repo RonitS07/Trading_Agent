@@ -1,3 +1,5 @@
+/* Inherits global vars from style.css */
+
 .container {
     display: flex;
     align-items: center;
@@ -5,49 +7,69 @@
     height: 100vh;
     margin: 0;
     overflow: hidden;
-    background: radial-gradient(circle at 50% 10%, #1e293b 0%, #020617 60%);
-    color: #f8fafc;
+    /* Background handled by global body style, so we can be transparent or overlay */
+    background: transparent;
+    color: var(--text-primary);
 }
 
 .loginCard {
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(148, 163, 184, 0.1);
+    background: rgba(8, 10, 15, 0.6);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     padding: 3rem;
     border-radius: 24px;
     width: 100%;
-    max-width: 400px;
+    max-width: 420px;
     text-align: center;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    animation: fadeIn 0.8s ease-out;
+    box-shadow: 0 0 100px rgba(0, 0, 0, 0.8);
+    animation: fadeIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Decorate corners */
+.loginCard::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
 }
 
 .logoBox {
-    width: 60px;
-    height: 60px;
+    width: 64px;
+    height: 64px;
     margin: 0 auto 1.5rem;
-    background: linear-gradient(135deg, #06b6d4, #3b82f6);
+    background: rgba(0, 242, 255, 0.1);
+    border: 1px solid rgba(0, 242, 255, 0.3);
     border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.8rem;
-    color: white;
-    box-shadow: 0 0 30px rgba(6, 182, 212, 0.3);
+    color: var(--accent-cyan);
+    box-shadow: 0 0 30px rgba(0, 242, 255, 0.15);
 }
 
 .brandName {
-    font-size: 2rem;
+    font-size: 2.2rem;
     font-weight: 800;
     margin-bottom: 0.5rem;
     display: block;
     letter-spacing: -0.5px;
+    color: white;
 }
 
 .brandSubtitle {
-    color: #94a3b8;
-    font-size: 0.95rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
     margin-bottom: 2.5rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 0.7rem;
+    font-weight: 700;
 }
 
 .inputGroup {
@@ -57,64 +79,211 @@
 
 .inputGroup label {
     display: block;
-    font-size: 0.85rem;
-    color: #cbd5e1;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
     margin-bottom: 0.5rem;
-    font-weight: 600;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .inputGroup input {
     width: 100%;
-    padding: 1rem;
-    background: rgba(30, 41, 59, 0.5);
-    border: 1px solid rgba(148, 163, 184, 0.2);
+    padding: 1rem 1.2rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     color: white;
-    font-family: inherit;
+    font-family: var(--font-data);
     font-size: 1rem;
     transition: all 0.3s ease;
     outline: none;
 }
 
 .inputGroup input:focus {
-    border-color: #06b6d4;
-    box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
-    background: rgba(30, 41, 59, 0.8);
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 20px rgba(0, 242, 255, 0.1);
+    background: rgba(0, 0, 0, 0.5);
 }
 
 .btnLogin {
-    background: linear-gradient(135deg, #06b6d4, #3b82f6);
-    color: white;
+    background: var(--accent-cyan);
+    color: #000;
     width: 100%;
     padding: 1rem;
     border: none;
     border-radius: 12px;
-    font-size: 1.1rem;
-    font-weight: 700;
+    font-size: 1rem;
+    font-weight: 800;
     cursor: pointer;
     transition: all 0.3s ease;
     margin-top: 1rem;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
 }
 
 .btnLogin:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(6, 182, 212, 0.3);
+    box-shadow: 0 0 30px rgba(0, 242, 255, 0.4);
+}
+
+/* Loading State for Button */
+.btnLogin:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background: #334155;
+    color: #94a3b8;
+    box-shadow: none;
+    transform: none;
 }
 
 .errorMsg {
-    color: #ef4444;
-    font-size: 0.9rem;
-    margin-top: 1rem;
+    color: var(--accent-red);
+    font-size: 0.85rem;
+    margin-top: 1.5rem;
+    font-weight: 600;
+    background: rgba(255, 0, 85, 0.1);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 0, 85, 0.2);
 }
 
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: scale(0.95) translateY(20px);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: scale(1) translateY(0);
     }
+}
+
+.successMsg {
+    color: var(--accent-green);
+    font-size: 0.85rem;
+    margin-top: 1.5rem;
+    font-weight: 600;
+    background: rgba(34, 197, 94, 0.1);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Welcome Overlay */
+.welcomeOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(20px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.welcomeCard {
+    background: linear-gradient(135deg, rgba(13, 18, 28, 0.95), rgba(0, 0, 0, 0.95));
+    border: 1px solid var(--accent-cyan);
+    box-shadow: 0 0 50px rgba(0, 242, 255, 0.2);
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    max-width: 450px;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.welcomeCard::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+}
+
+.missionHeader {
+    font-size: 0.8rem;
+    color: var(--accent-cyan);
+    letter-spacing: 3px;
+    font-weight: 800;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(0, 242, 255, 0.2);
+    padding-bottom: 10px;
+    display: inline-block;
+}
+
+.avatarBig {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--accent-blue), #60a5fa);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: white;
+    box-shadow: 0 0 30px rgba(0, 136, 255, 0.3);
+}
+
+.briefBox {
+    background: rgba(0, 242, 255, 0.05);
+    border: 1px solid rgba(0, 242, 255, 0.15);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 25px 0;
+}
+
+.briefLabel {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.briefValue {
+    font-family: var(--font-data);
+    font-size: 2rem;
+    color: white;
+    font-weight: 700;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.briefSub {
+    font-size: 0.65rem;
+    color: var(--accent-cyan);
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin-top: 5px;
+}
+
+.btnLaunch {
+    background: var(--accent-green);
+    color: black;
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: all 0.3s;
+    letter-spacing: 1px;
+    margin-top: 10px;
+    box-shadow: 0 0 20px rgba(191, 255, 0, 0.3);
+}
+
+.btnLaunch:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 40px rgba(191, 255, 0, 0.5);
 }

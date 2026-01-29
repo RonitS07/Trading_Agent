@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLivePrices } from '@/hooks/useLivePrices';
+import { usePortfolioContext } from '@/components/Providers';
 
 export default function Sidebar({ user, onSelectStock }) {
+    const { refresh } = usePortfolioContext();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
     const [showResults, setShowResults] = useState(false);
@@ -129,7 +131,7 @@ export default function Sidebar({ user, onSelectStock }) {
             });
             if (res.ok) {
                 setRefreshTrigger(p => p + 1); // Refresh list
-                window.location.reload(); // Refresh balance (simple way)
+                refresh(); // Refresh balance via context
             }
         } catch (e) {
             alert('Failed to cancel');

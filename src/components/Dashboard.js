@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DesktopTerminal from './DesktopTerminal';
 import MobileTerminal from './MobileTerminal';
+import { PortfolioProvider } from './Providers';
 
 export default function Dashboard({ initialUser }) {
     const router = useRouter();
@@ -40,10 +41,18 @@ export default function Dashboard({ initialUser }) {
     if (!hasMounted) return null;
 
     if (isMobile) {
-        return <MobileTerminal user={user} onProfile={handleProfileRedirect} onLogout={handleLogout} onTradeComplete={handleTradeComplete} />;
+        return (
+            <PortfolioProvider user={user}>
+                <MobileTerminal user={user} onProfile={handleProfileRedirect} onLogout={handleLogout} onTradeComplete={handleTradeComplete} />
+            </PortfolioProvider>
+        );
     }
 
-    return <DesktopTerminal user={user} onTradeComplete={handleTradeComplete} />;
+    return (
+        <PortfolioProvider user={user}>
+            <DesktopTerminal user={user} onTradeComplete={handleTradeComplete} />
+        </PortfolioProvider>
+    );
 }
 
 

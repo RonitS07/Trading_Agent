@@ -1,6 +1,6 @@
 'use client';
 
-import { usePortfolioData } from '@/hooks/usePortfolioData';
+import { usePortfolioContext } from '@/components/Providers';
 
 export default function PortfolioSummary({ user }) {
     const {
@@ -9,7 +9,7 @@ export default function PortfolioSummary({ user }) {
         totalPL,
         totalPLPct,
         balance
-    } = usePortfolioData(user);
+    } = usePortfolioContext();
 
     return (
         <div className="portfolio-bar">

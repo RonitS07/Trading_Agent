@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import PortfolioSummary from './PortfolioSummary';
@@ -11,8 +11,16 @@ import AIChat from './AIChat';
 import { isMarketOpen } from '@/lib/market';
 
 export default function DesktopTerminal({ user, onTradeComplete }) {
-    const [activeTab, setActiveTab] = useState('overview');
-    const [selectedStock, setSelectedStock] = useState('RELIANCE.NS');
+    const searchParams = useSearchParams();
+    const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
+    // Sync URL with active tab (optional, but good for persistence)
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams);
+        if (params.get('tab') !== activeTab) {
+            // we could update URL here but lets just handle incoming for now to avoid hydration mismatches
+        }
+    }, [activeTab, searchParams]);
+    const [selectedStock, setSelectedStock] = useState('AAPL');
     const [selectedStockData, setSelectedStockData] = useState(null);
     const [marketStatus, setMarketStatus] = useState(isMarketOpen());
 
@@ -59,7 +67,7 @@ export default function DesktopTerminal({ user, onTradeComplete }) {
     }, []);
 
     return (
-        <div className="pro-theme">
+        <div className="app-container">
             <Header
                 user={user}
                 activeTab={activeTab}

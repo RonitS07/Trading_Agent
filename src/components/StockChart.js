@@ -266,7 +266,7 @@ function StockChart({ symbol, range = '1d', holdings = EMPTY_ARRAY, trades = EMP
                             tick={{ fontSize: 10, fill: '#64748b' }}
                             axisLine={false}
                             tickLine={false}
-                            width={45}
+                            width={55}
                             tickFormatter={(val) => `₹${(val / 1000).toFixed(1)}k`}
                         />
                         <Tooltip
