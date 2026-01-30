@@ -4,6 +4,7 @@ import { createContext, useContext } from 'react';
 import { SessionProvider } from 'next-auth/react';
 import { usePortfolioData } from '@/hooks/usePortfolioData';
 import { PriceProvider } from './PriceContext';
+import { ToastProvider } from './Toast';
 
 const PortfolioContext = createContext(null);
 
@@ -24,11 +25,13 @@ function InnerPortfolioProvider({ children, user }) {
 
 export function PortfolioProvider({ children, user }) {
     return (
-        <PriceProvider>
-            <InnerPortfolioProvider user={user}>
-                {children}
-            </InnerPortfolioProvider>
-        </PriceProvider>
+        <ToastProvider>
+            <PriceProvider>
+                <InnerPortfolioProvider user={user}>
+                    {children}
+                </InnerPortfolioProvider>
+            </PriceProvider>
+        </ToastProvider>
     );
 }
 

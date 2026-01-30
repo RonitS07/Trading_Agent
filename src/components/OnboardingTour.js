@@ -47,10 +47,18 @@ export default function OnboardingTour({ onComplete, user }) {
     const [isAnimating, setIsAnimating] = useState(false);
 
     useEffect(() => {
-        if (!user) return;
-        const storageKey = `tp_tour_complete_${user.id}`;
-        const hasSeen = localStorage.getItem(storageKey);
-        if (!hasSeen) setIsVisible(true);
+        if (!user) {
+            // Guest logic
+            const hasSeen = localStorage.getItem('tp_tour_complete_guest');
+            if (!hasSeen) setIsVisible(true);
+            return;
+        }
+
+        // Signed in user logic - DUAL GUARD
+        if (!user.onboarded) {
+            const hasSeen = localStorage.getItem(`tp_tour_complete_${user.id}`);
+            if (!hasSeen) setIsVisible(true);
+        }
     }, [user]);
 
     const currentStep = STEPS[stepIndex];
@@ -89,6 +97,14 @@ export default function OnboardingTour({ onComplete, user }) {
     }, [stepIndex, isVisible, currentStep]);
 
     const handleNext = () => {
+        // Aggressively mark as seen in localStorage as soon as they interact
+        // to prevent re-appearance on reload if they don't finish the whole tour.
+        if (user) {
+            localStorage.setItem(`tp_tour_complete_${user.id}`, 'true');
+        } else {
+            localStorage.setItem('tp_tour_complete_guest', 'true');
+        }
+
         if (stepIndex < STEPS.length - 1) {
             setStepIndex(p => p + 1);
         } else {
@@ -96,10 +112,20 @@ export default function OnboardingTour({ onComplete, user }) {
         }
     };
 
-    const handleSkip = () => {
+    const handleSkip = async () => {
         setIsVisible(false);
         if (user) {
+            // Update Database
+            try {
+                await fetch('/api/user', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.id, onboarded: true })
+                });
+            } catch (e) { /* silent */ }
             localStorage.setItem(`tp_tour_complete_${user.id}`, 'true');
+        } else {
+            localStorage.setItem('tp_tour_complete_guest', 'true');
         }
         if (onComplete) onComplete();
     };

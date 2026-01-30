@@ -5,12 +5,32 @@ import { AssetListSkeleton } from '../LoadingSkeleton';
 export default function AssetsTab({
     user,
     prices,
+    openOrders = [],
     handleSelectStock,
     setActiveView
 }) {
     return (
         <section id="m-view-portfolio">
             <div style={{ padding: '20px' }}>
+                {openOrders.length > 0 && (
+                    <div style={{ marginBottom: '30px' }}>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '15px', color: 'var(--accent-cyan)' }}>Open Orders</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {openOrders.map(order => (
+                                <div key={order.id} style={{ background: 'rgba(255, 255, 255, 0.03)', border: `1px solid ${order.action === 'BUY' ? 'rgba(191, 255, 0, 0.2)' : 'rgba(255, 0, 85, 0.2)'}`, borderRadius: '16px', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 'bold' }}>{order.symbol}</div>
+                                        <div style={{ fontSize: '0.75rem', opacity: 0.6 }}>{order.action} {order.qty} @ ₹{order.limitPrice || order.stopPrice}</div>
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', padding: '4px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)' }}>
+                                        {order.type}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '20px' }}>Your Assets</h3>
                 {user?.portfolio && user.portfolio.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>

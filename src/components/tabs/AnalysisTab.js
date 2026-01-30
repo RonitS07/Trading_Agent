@@ -3,19 +3,32 @@
 import { useState, useEffect, useRef } from 'react';
 import StockChart from '../StockChart';
 import TradePanel from '../TradePanel';
+import { usePortfolioContext } from '../Providers';
+import { useLivePrices } from '@/hooks/useLivePrices';
 
 export default function AnalysisTab({
     selectedStock,
-    stockData,
-    range,
-    setRange,
-    ranges,
+    stockData: initialData,
+    range = '1d',
+    setRange = () => { },
+    ranges = [],
     user,
     onTradeComplete,
     marketStatus,
-    watchlist,
-    toggleWatchlist
+    watchlist: propWatchlist,
+    toggleWatchlist: propToggle
 }) {
+    const { watchlist: contextWatchlist, toggleWatchlist: contextToggle, quotes: contextQuotes } = usePortfolioContext() || {};
+
+    // Subscribe to live price for THIS stock explicitly
+    const localQuotes = useLivePrices([selectedStock]);
+
+    // Support both prop and context
+    const watchlist = contextWatchlist || propWatchlist;
+    const toggleWatchlist = contextToggle || propToggle;
+
+    // Priority: Local live quote > context quotes > initial fetch data
+    const stockData = localQuotes[selectedStock] || contextQuotes?.[selectedStock] || initialData;
     // Define isInWatchlist at the top level
     const isInWatchlist = watchlist?.includes(selectedStock);
 

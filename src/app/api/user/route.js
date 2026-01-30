@@ -56,3 +56,23 @@ export async function GET(request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+export async function PATCH(request) {
+    try {
+        const body = await request.json();
+        const { userId, onboarded } = body;
+
+        if (!userId) {
+            return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+        }
+
+        const updatedUser = await prisma.user.update({
+            where: { id: userId },
+            data: { onboarded: !!onboarded }
+        });
+
+        return NextResponse.json({ success: true, onboarded: updatedUser.onboarded });
+    } catch (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}

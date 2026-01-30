@@ -6,24 +6,28 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import PortfolioSummary from './PortfolioSummary';
 import OverviewTab from './OverviewTab';
-import AnalysisTab from './AnalysisTab';
+import AnalysisTab from './tabs/AnalysisTab';
 import AIChat from './AIChat';
 import OnboardingTour from './OnboardingTour';
 import { isMarketOpen } from '@/lib/market';
+import { usePortfolioContext } from './Providers';
 
 export default function DesktopTerminal({ user, onTradeComplete }) {
+    const { watchlist, toggleWatchlist, marketStatus } = usePortfolioContext();
     const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
-    // Sync URL with active tab (optional, but good for persistence)
-    useEffect(() => {
-        const params = new URLSearchParams(searchParams);
-        if (params.get('tab') !== activeTab) {
-            // we could update URL here but lets just handle incoming for now to avoid hydration mismatches
-        }
-    }, [activeTab, searchParams]);
+
+    // ... rest of the component state ...
     const [selectedStock, setSelectedStock] = useState('AAPL');
     const [selectedStockData, setSelectedStockData] = useState(null);
-    const [marketStatus, setMarketStatus] = useState(isMarketOpen());
+    const [range, setRange] = useState('1d');
+
+    const ranges = [
+        { label: '1D', value: '1d' },
+        { label: '1M', value: '1mo' },
+        { label: '6M', value: '6mo' },
+        { label: '5Y', value: '5y' },
+    ];
 
     const handleStockSelect = async (symbol, shouldSwitchTab = true) => {
         setSelectedStock(symbol);
@@ -36,26 +40,13 @@ export default function DesktopTerminal({ user, onTradeComplete }) {
             // silent
         }
     }
-    // Initialize default stock data
-    useEffect(() => {
-        if (!selectedStockData && selectedStock) {
-            handleStockSelect(selectedStock, false);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
-    // Keyboard Shortcuts
+    // Keyboard Shortcuts effect
     useEffect(() => {
         const handleKeyDown = (e) => {
-            // Ignore if input is focused
             if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
-
             if (e.key.toLowerCase() === 'b') {
-                setActiveTab('analysis'); // Force switch to trade view
-                // We need a way to trigger the Buy Modal. 
-                // For MVP without complex Context, we'll use a custom event or rely on the user seeing the tab switch
-                // and clicking. BUT, user asked for it to work.
-                // Let's dispatch a custom event that TradePanel listens to.
+                setActiveTab('analysis');
                 window.dispatchEvent(new CustomEvent('trade-shortcut', { detail: 'BUY' }));
             }
             if (e.key.toLowerCase() === 's') {
@@ -94,10 +85,15 @@ export default function DesktopTerminal({ user, onTradeComplete }) {
                     {activeTab === 'analysis' && (
                         <AnalysisTab
                             user={user}
-                            symbol={selectedStock}
+                            selectedStock={selectedStock}
                             stockData={selectedStockData}
+                            range={range}
+                            setRange={setRange}
+                            ranges={ranges}
                             onTradeComplete={onTradeComplete}
                             marketStatus={marketStatus}
+                            watchlist={watchlist}
+                            toggleWatchlist={toggleWatchlist}
                         />
                     )}
                     {activeTab === 'planner' && (

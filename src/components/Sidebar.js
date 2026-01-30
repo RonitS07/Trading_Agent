@@ -1,82 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLivePrices } from '@/hooks/useLivePrices';
 import { usePortfolioContext } from '@/components/Providers';
+import { useToast } from './Toast';
 
 export default function Sidebar({ user, onSelectStock, isOpen, closeSidebar }) {
-    const { refresh } = usePortfolioContext();
+    const { refresh, watchlist, toggleWatchlist, quotes: prices } = usePortfolioContext();
+    const showToast = useToast();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState([]);
     const [showResults, setShowResults] = useState(false);
 
-    // Watchlist State
-    const [watchlist, setWatchlist] = useState([]);
-    const [isSynced, setIsSynced] = useState(false);
-
     const holdings = user?.portfolio || [];
-
-    // Combine for pricing
-    const allSymbols = useMemo(() => {
-        const holdingSymbols = holdings.map(h => h.symbol);
-        return [...new Set([...watchlist, ...holdingSymbols])];
-    }, [watchlist, holdings]);
-
-    const prices = useLivePrices(allSymbols);
-
-    // Initial Sync: DB -> Local
-    useEffect(() => {
-        if (!user) {
-            const saved = localStorage.getItem('tp_watchlist');
-            if (saved) setWatchlist(JSON.parse(saved));
-            return;
-        }
-
-        const fetchWatchlist = async () => {
-            try {
-                const res = await fetch('/api/watchlist');
-                if (res.ok) {
-                    const data = await res.json();
-                    if (Array.isArray(data)) {
-                        setWatchlist(data);
-                        setIsSynced(true);
-                        localStorage.setItem('tp_watchlist', JSON.stringify(data));
-                    }
-                }
-            } catch (e) {
-                // console.error("Watchlist sync failed", e);
-            }
-        };
-        fetchWatchlist();
-    }, [user]);
-
-    const toggleWatchlist = async (e, symbol) => {
-        e.stopPropagation();
-        let newWatchlist;
-        let action;
-
-        if (watchlist.includes(symbol)) {
-            newWatchlist = watchlist.filter(s => s !== symbol);
-            action = 'REMOVE';
-        } else {
-            newWatchlist = [...watchlist, symbol];
-            action = 'ADD';
-        }
-
-        setWatchlist(newWatchlist);
-        localStorage.setItem('tp_watchlist', JSON.stringify(newWatchlist));
-
-        // Background Sync
-        if (user) {
-            try {
-                await fetch('/api/watchlist', {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ symbol, action })
-                });
-            } catch (e) {
-                // Revert on serious error? enhanced: Notification
-            }
-        }
-    };
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
@@ -101,6 +35,7 @@ export default function Sidebar({ user, onSelectStock, isOpen, closeSidebar }) {
     // Open Orders State
     const [openOrders, setOpenOrders] = useState([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const prevOrderCount = useRef(0);
 
     // Fetch Open Orders (Periodic for Lazy Execution Checks)
     useEffect(() => {
@@ -110,15 +45,22 @@ export default function Sidebar({ user, onSelectStock, isOpen, closeSidebar }) {
                 const res = await fetch('/api/orders');
                 if (res.ok) {
                     const data = await res.json();
+
+                    // If count changed (executed or cancelled), refresh portfolio data
+                    if (data.length !== prevOrderCount.current) {
+                        refresh();
+                        prevOrderCount.current = data.length;
+                    }
+
                     setOpenOrders(data);
                 }
             } catch (e) { /* silent */ }
         };
 
         fetchOrders();
-        const interval = setInterval(fetchOrders, 5000); // Check every 5s
+        const interval = setInterval(fetchOrders, 3000); // Check every 3s
         return () => clearInterval(interval);
-    }, [user, refreshTrigger]);
+    }, [user, refreshTrigger, refresh]);
 
     const cancelOrder = async (e, orderId) => {
         e.stopPropagation();
@@ -130,11 +72,12 @@ export default function Sidebar({ user, onSelectStock, isOpen, closeSidebar }) {
                 body: JSON.stringify({ orderId })
             });
             if (res.ok) {
+                showToast('Order cancelled successfully', 'success');
                 setRefreshTrigger(p => p + 1); // Refresh list
                 refresh(); // Refresh balance via context
             }
         } catch (e) {
-            alert('Failed to cancel');
+            showToast('Failed to cancel order', 'error');
         }
     };
 
@@ -172,22 +115,25 @@ export default function Sidebar({ user, onSelectStock, isOpen, closeSidebar }) {
                                     <div
                                         key={item.symbol}
                                         className="w-item"
+                                        style={{ padding: '12px 15px' }}
                                         onClick={() => {
                                             onSelectStock(item.symbol);
                                             setQuery('');
                                             setShowResults(false);
                                         }}
                                     >
-                                        <div className="w-top">
-                                            <span>{item.symbol}</span>
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{item.shortname}</span>
-                                                <i
-                                                    className={`fa-${watchlist.includes(item.symbol) ? 'solid' : 'regular'} fa-star`}
-                                                    style={{ color: 'var(--accent-cyan)', cursor: 'pointer' }}
-                                                    onClick={(e) => toggleWatchlist(e, item.symbol)}
-                                                ></i>
+                                        <div className="w_top_search" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', marginRight: '10px' }}>
+                                                <span style={{ fontWeight: '700', fontSize: '0.95rem' }}>{item.symbol}</span>
+                                                <span style={{ fontSize: '0.7rem', opacity: 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {item.shortname}
+                                                </span>
                                             </div>
+                                            <i
+                                                className={`fa-${watchlist.includes(item.symbol) ? 'solid' : 'regular'} fa-star`}
+                                                style={{ color: 'var(--accent-cyan)', cursor: 'pointer', fontSize: '1rem', padding: '4px' }}
+                                                onClick={(e) => toggleWatchlist(e, item.symbol)}
+                                            ></i>
                                         </div>
                                     </div>
                                 ))}

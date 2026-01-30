@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { isMarketOpen } from '@/lib/market';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,12 @@ async function getCurrentPrice(symbol) {
 
 export async function POST(request) {
     try {
+        // Market Open Check
+        const market = isMarketOpen();
+        if (!market.open) {
+            return NextResponse.json({ error: `Market is closed: ${market.reason}` }, { status: 403 });
+        }
+
         const body = await request.json();
         const { userId, symbol, action, qty, password, type = 'MARKET', limitPrice, stopPrice, targetPrice } = body;
 
@@ -93,14 +100,19 @@ export async function POST(request) {
         // 5. Execute Transaction
         const result = await prisma.$transaction(async (tx) => {
             // Update Balance
-            const newBalance = action === 'BUY'
-                ? user.balance - totalCost
-                : user.balance + totalProceeds;
+            let newBalance = user.balance;
+            if (action === 'BUY') {
+                newBalance = user.balance - totalCost;
+            } else if (action === 'SELL' && status === 'EXECUTED') {
+                newBalance = user.balance + totalProceeds;
+            }
 
-            await tx.user.update({
-                where: { id: userId },
-                data: { balance: newBalance }
-            });
+            if (newBalance !== user.balance) {
+                await tx.user.update({
+                    where: { id: userId },
+                    data: { balance: newBalance }
+                });
+            }
 
             // Register Trade
             await tx.trade.create({

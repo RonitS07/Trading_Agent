@@ -54,7 +54,9 @@ export async function GET(request) {
 
         for (const order of openOrders) {
             let shouldExecute = false;
-            const currentPrice = quoteMap[order.symbol];
+            // Case-insensitive lookup
+            const orderSymbol = order.symbol.toUpperCase();
+            const currentPrice = Object.entries(quoteMap).find(([sym]) => sym.toUpperCase() === orderSymbol)?.[1];
 
             if (currentPrice) {
                 if (order.type === 'LIMIT' && order.limitPrice) {
@@ -111,13 +113,25 @@ export async function GET(request) {
                             }
 
                             // Return Proceeds to Balance
-                            // Assuming we deducted stock, we need to add cash
-                            const proceeds = order.qty * (order.limitPrice || order.stopPrice || currentPrice);
-                            const user = await tx.user.findUnique({ where: { id: userId } });
-                            await tx.user.update({
-                                where: { id: userId },
-                                data: { balance: user.balance + proceeds }
-                            });
+                            // SAFETY CHECK: If order was created BEFORE the balance fix (2026-01-30T08:30:40Z),
+                            // it was already credited upon creation. DO NOT credit again.
+                            const fixTimestamp = new Date('2026-01-30T08:30:40Z');
+                            if (order.timestamp > fixTimestamp) {
+                                const execPrice = order.limitPrice || order.stopPrice || currentPrice;
+                                const totalValue = order.qty * execPrice;
+
+                                // Taxes (approximate for India) - Match trade/route.js logic
+                                const stt = totalValue * 0.001;
+                                const otherCharges = totalValue * 0.0005;
+                                const taxes = stt + otherCharges;
+                                const totalProceeds = totalValue - taxes;
+
+                                const user = await tx.user.findUnique({ where: { id: userId } });
+                                await tx.user.update({
+                                    where: { id: userId },
+                                    data: { balance: user.balance + totalProceeds }
+                                });
+                            }
                         }
                     }
                 });
@@ -153,15 +167,17 @@ export async function DELETE(request) {
         await prisma.$transaction(async (tx) => {
             // Refund Balance for BUY orders
             if (order.action === 'BUY') {
-                const refundAmount = order.limitPrice * order.qty; // Refund the blocked amount (ignoring tax diff for now to keep simple)
-                // Actually in trade/route we deducted (limitPrice * qty) + tax. 
-                // We should refund `order.cost` if we stored it?
-                // Schema has `cost`. Let's assume `cost` was the total deducted.
+                // In trade/route we deducted (limitPrice * qty) + tax.
+                // Principal = order.limitPrice * order.qty
+                // order.cost stores the tax amount
+                const principal = (order.limitPrice || 0) * order.qty;
+                const refundAmount = principal + (order.cost || 0);
+
                 // Re-fetch user to update balance
                 const user = await tx.user.findUnique({ where: { id: session.user.id } });
                 await tx.user.update({
                     where: { id: session.user.id },
-                    data: { balance: user.balance + (order.cost || 0) }
+                    data: { balance: user.balance + refundAmount }
                 });
             }
 

@@ -201,7 +201,7 @@ function StockChart({ symbol, range = '1d', holdings = EMPTY_ARRAY, trades = EMP
     // I will stick to SMA overlay for simplicity and elegance in this single view.
 
     if (loading && data.length === 0) return (
-        <div style={{ width: '100%', height: 300 }}>
+        <div style={{ width: '100%', height: '100%' }}>
             <ChartSkeleton />
         </div>
     );
@@ -216,7 +216,7 @@ function StockChart({ symbol, range = '1d', holdings = EMPTY_ARRAY, trades = EMP
     const gradientId = isUp ? 'colorUp' : 'colorDown';
 
     return (
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', height: '100%', width: '100%' }}>
             {/* Indicator Toggles - Only show when sufficient data (20+ points for SMA) */}
             {data.length >= 20 && (
                 <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 10, display: 'flex', gap: '5px' }}>
@@ -240,7 +240,7 @@ function StockChart({ symbol, range = '1d', holdings = EMPTY_ARRAY, trades = EMP
 
             <div style={{
                 width: '100%',
-                height: 300,
+                height: '100%',
                 opacity: opacity,
                 transition: 'opacity 0.4s ease-out'
             }}>

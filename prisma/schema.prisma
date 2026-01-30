@@ -13,6 +13,7 @@ model User {
   password  String
   name      String?
   balance   Float    @default(100000)
+  onboarded Boolean  @default(false)
   createdAt DateTime @default(now())
 
   watchlist Watchlist[]

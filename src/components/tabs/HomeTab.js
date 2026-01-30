@@ -50,7 +50,15 @@ export default function HomeTab({
                     <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '700' }}>Performance</h3>
                     <span style={{ fontSize: '0.75rem', opacity: 0.5, background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: '6px' }}>LAST 30 DAYS</span>
                 </div>
-                <div style={{ background: '#0f172a', borderRadius: '20px', padding: '15px 0', border: '1px solid rgba(255,255,255,0.05)', height: '200px', overflow: 'hidden' }}>
+                <div style={{
+                    background: '#0f172a',
+                    borderRadius: '20px',
+                    padding: '15px',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    height: '220px',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                }}>
                     <StockChart symbol="PORTFOLIO" range="1mo" holdings={user?.portfolio || []} trades={user?.trades || []} currentBalance={balance} />
                 </div>
             </div>

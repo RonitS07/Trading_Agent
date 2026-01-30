@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import AIChat from './AIChat';
 import MobileOnboarding from './MobileOnboarding';
@@ -8,6 +8,7 @@ import { ChartSkeleton } from './LoadingSkeleton';
 
 import { usePortfolioContext } from '@/components/Providers';
 import { useLivePrices } from '@/hooks/useLivePrices';
+import { useToast } from './Toast';
 
 // Dynamic imports for code splitting and lazy loading
 const HomeTab = dynamic(() => import('./tabs/HomeTab'), {
@@ -20,11 +21,24 @@ const AssetsTab = dynamic(() => import('./tabs/AssetsTab'), {
     loading: () => <div style={{ padding: '20px' }}><ChartSkeleton /></div>
 });
 
-export default function MobileTerminal({ user, onProfile, onLogout, onTradeComplete }) {
-    const [range, setRange] = useState('1d');
+export default function MobileTerminal({ user, onTradeComplete, onProfile, onLogout }) {
+    const {
+        watchlist,
+        toggleWatchlist,
+        quotes: prices,
+        refresh,
+        netWorth,
+        invested,
+        unrealizedPL,
+        balance,
+        marketStatus,
+        isLoading: portfolioLoading
+    } = usePortfolioContext();
+
     const [activeView, setActiveView] = useState('home');
-    const [selectedStock, setSelectedStock] = useState('RELIANCE.NS');
+    const [selectedStock, setSelectedStock] = useState('AAPL');
     const [stockData, setStockData] = useState(null);
+    const [range, setRange] = useState('1d'); // Changed default to '1d' to match original
 
     const ranges = [
         { label: '1D', value: '1d' },
@@ -33,22 +47,32 @@ export default function MobileTerminal({ user, onProfile, onLogout, onTradeCompl
         { label: '5Y', value: '5y' },
     ];
 
-    const [watchlist, setWatchlist] = useState(['RELIANCE.NS', 'TCS.NS', 'INFY.NS']);
+    // Alias for compatibility
+    const watchlistQuotes = prices;
 
-    // Combine watchlist + selected stock for fetching
-    const allSymbols = [selectedStock, ...watchlist].filter(Boolean);
-    const prices = useLivePrices(allSymbols);
-    const watchlistQuotes = prices; // Alias for compatibility with existing render logic
+    // Open Orders State (Mobile Sync)
+    const [openOrders, setOpenOrders] = useState([]);
+    const prevOrderCount = useRef(0);
 
-    // Use unified hook for portfolio data
-    const {
-        netWorth,
-        invested,
-        unrealizedPL,
-        balance,
-        marketStatus,
-        isLoading: portfolioLoading
-    } = usePortfolioContext();
+    useEffect(() => {
+        if (!user) return;
+        const fetchOrders = async () => {
+            try {
+                const res = await fetch('/api/orders');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.length !== prevOrderCount.current) {
+                        refresh();
+                        prevOrderCount.current = data.length;
+                    }
+                    setOpenOrders(data);
+                }
+            } catch (e) { /* silent */ }
+        };
+        fetchOrders();
+        const interval = setInterval(fetchOrders, 3000);
+        return () => clearInterval(interval);
+    }, [user, refresh]);
 
     // Search State
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -60,24 +84,33 @@ export default function MobileTerminal({ user, onProfile, onLogout, onTradeCompl
 
     // Initial Load & Onboarding Check
     useEffect(() => {
-        const saved = localStorage.getItem('tp_watchlist');
-        if (saved) setWatchlist(JSON.parse(saved));
-
-        // Check onboarding (User Specific)
-        // If user is logged in, use their ID. If guest, use 'guest' or skip (assuming signup implies user exists)
-        const userId = user?.id || 'guest';
-        const key = `tp_onboarding_completed_${userId}`;
-        const hasOnboarded = localStorage.getItem(key);
-
-        if (!hasOnboarded) {
-            setShowOnboarding(true);
+        if (!user) {
+            const hasOnboarded = localStorage.getItem('tp_onboarding_completed_guest');
+            if (!hasOnboarded) setShowOnboarding(true);
+            return;
         }
-    }, [user?.id]); // Re-run if user changes (e.g. login/signup)
 
-    const handleOnboardingComplete = () => {
+        // DUAL GUARD
+        if (!user.onboarded) {
+            const hasOnboarded = localStorage.getItem(`tp_onboarding_completed_${user.id}`);
+            if (!hasOnboarded) setShowOnboarding(true);
+        }
+    }, [user]);
+
+    const handleOnboardingComplete = async () => {
         setShowOnboarding(false);
-        const userId = user?.id || 'guest';
-        localStorage.setItem(`tp_onboarding_completed_${userId}`, 'true');
+        if (user) {
+            try {
+                await fetch('/api/user', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.id, onboarded: true })
+                });
+            } catch (e) { /* silent */ }
+            localStorage.setItem(`tp_onboarding_completed_${user.id}`, 'true');
+        } else {
+            localStorage.setItem('tp_onboarding_completed_guest', 'true');
+        }
     };
 
     // Search Debounce Logic
@@ -112,30 +145,11 @@ export default function MobileTerminal({ user, onProfile, onLogout, onTradeCompl
         setSearchQuery('');
     };
 
-    const toggleWatchlist = async (e, symbol) => {
-        e.stopPropagation();
-        let newWatchlist;
-        const isRemoving = watchlist.includes(symbol);
+    const showToast = useToast();
 
-        if (isRemoving) {
-            newWatchlist = watchlist.filter(s => s !== symbol);
-        } else {
-            newWatchlist = [...watchlist, symbol];
-        }
-        setWatchlist(newWatchlist);
-        localStorage.setItem('tp_watchlist', JSON.stringify(newWatchlist));
-
-        // Sync with API
-        if (user) {
-            try {
-                await fetch('/api/watchlist', {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ symbol, action: isRemoving ? 'REMOVE' : 'ADD' })
-                });
-            } catch (e) { /* silent */ }
-        }
-    };
+    // The toggleWatchlist function is now provided by usePortfolioContext,
+    // so the local implementation is removed.
+    // The call site in the JSX will use the context version.
 
     return (
         <div className="mobile-app-theme" style={{ color: 'white', minHeight: '100dvh', paddingBottom: 'calc(120px + env(safe-area-inset-bottom, 0px))', position: 'relative', fontFamily: 'Inter, sans-serif' }}>
@@ -213,6 +227,7 @@ export default function MobileTerminal({ user, onProfile, onLogout, onTradeCompl
                     <AssetsTab
                         user={user}
                         prices={prices}
+                        openOrders={openOrders}
                         handleSelectStock={handleSelectStock}
                         setActiveView={setActiveView}
                     />
