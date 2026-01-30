@@ -25,7 +25,7 @@ export default function ProfilePage() {
             fetch(`/api/user?userId=${session.user.id}`)
                 .then(res => res.json())
                 .then(data => setStats(data))
-                .catch(err => console.error(err));
+                .catch(() => { });
         }
     }, [session]);
 

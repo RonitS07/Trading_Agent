@@ -4,27 +4,38 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100vh;
+    height: 100dvh;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     margin: 0;
     overflow: hidden;
+    touch-action: none;
+    /* Prevent rubber-banding/scrolling */
     /* Background handled by global body style, so we can be transparent or overlay */
     background: transparent;
     color: var(--text-primary);
+    z-index: 1000;
 }
 
 .loginCard {
     background: rgba(8, 10, 15, 0.6);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 3rem;
+    padding: 2.5rem 2rem;
     border-radius: 24px;
-    width: 100%;
-    max-width: 420px;
+    width: 90%;
+    max-width: 400px;
     text-align: center;
     box-shadow: 0 0 100px rgba(0, 0, 0, 0.8);
     animation: fadeIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
     position: relative;
     overflow: hidden;
+    touch-action: auto;
+    /* Allow interaction inside the card */
 }
 
 /* Decorate corners */
@@ -185,6 +196,7 @@
     justify-content: center;
     padding: 20px;
     animation: fadeIn 0.5s ease-out;
+    touch-action: none;
 }
 
 .welcomeCard {
@@ -253,10 +265,13 @@
 
 .briefValue {
     font-family: var(--font-data);
-    font-size: 2rem;
+    font-size: clamp(1.5rem, 5vw, 2rem);
+    /* Responsive font size */
     color: white;
     font-weight: 700;
     text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    word-break: break-word;
+    max-width: 100%;
 }
 
 .briefSub {

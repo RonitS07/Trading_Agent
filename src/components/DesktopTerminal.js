@@ -8,6 +8,7 @@ import PortfolioSummary from './PortfolioSummary';
 import OverviewTab from './OverviewTab';
 import AnalysisTab from './AnalysisTab';
 import AIChat from './AIChat';
+import OnboardingTour from './OnboardingTour';
 import { isMarketOpen } from '@/lib/market';
 
 export default function DesktopTerminal({ user, onTradeComplete }) {
@@ -66,6 +67,8 @@ export default function DesktopTerminal({ user, onTradeComplete }) {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
     return (
         <div className="app-container">
             <Header
@@ -73,12 +76,18 @@ export default function DesktopTerminal({ user, onTradeComplete }) {
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
                 marketStatus={marketStatus}
+                toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             />
 
             <PortfolioSummary user={user} />
 
             <div className="main-layout">
-                <Sidebar user={user} onSelectStock={handleStockSelect} />
+                <Sidebar
+                    user={user}
+                    onSelectStock={handleStockSelect}
+                    isOpen={isSidebarOpen}
+                    closeSidebar={() => setIsSidebarOpen(false)}
+                />
 
                 <main id="tab-container" className="content-area">
                     {activeTab === 'overview' && <OverviewTab user={user} onSelectStock={handleStockSelect} />}
@@ -96,6 +105,7 @@ export default function DesktopTerminal({ user, onTradeComplete }) {
                     )}
                 </main>
             </div>
+            <OnboardingTour user={user} />
         </div>
     );
 }

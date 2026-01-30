@@ -2,12 +2,19 @@
 
 import { useRouter } from 'next/navigation';
 
-export default function Header({ user, activeTab, setActiveTab, marketStatus }) {
+export default function Header({ user, activeTab, setActiveTab, marketStatus, toggleSidebar }) {
     const router = useRouter();
     return (
         <header className="top-header">
             <div className="header-content">
                 <div className="brand">
+                    <button
+                        className="mobile-menu-btn"
+                        onClick={toggleSidebar}
+                        style={{ background: 'transparent', border: 'none', color: 'white', marginRight: '10px', fontSize: '1.2rem' }}
+                    >
+                        <i className="fa-solid fa-bars"></i>
+                    </button>
                     <div className="logo-box" style={{ background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-blue))' }}>
                         <i className="fa-solid fa-bolt"></i>
                     </div>
@@ -24,8 +31,9 @@ export default function Header({ user, activeTab, setActiveTab, marketStatus }) 
                     <button className={`nav-btn ${activeTab === 'planner' ? 'active' : ''}`} onClick={() => setActiveTab('planner')}>
                         <i className="fa-solid fa-brain"></i> AI Planner
                     </button>
-                    <button className="nav-btn" onClick={() => router.push('/profile')}>
-                        <i className="fa-solid fa-user-gear"></i> Profile
+
+                    <button className="nav-btn" onClick={() => router.push('/profile')} id="nav-profile">
+                        <i className="fa-solid fa-user-astronaut"></i> {user?.name || 'PROFILE'}
                     </button>
                 </nav>
 
@@ -35,22 +43,6 @@ export default function Header({ user, activeTab, setActiveTab, marketStatus }) 
                     ) : (
                         <div id="market-status-badge" className="market-tag">NSE/BSE LIVE</div>
                     )}
-                    <div
-                        className="user-avatar"
-                        onClick={() => router.push('/profile')}
-                        style={{
-                            border: '2px solid var(--accent-cyan)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: 'rgba(6, 182, 212, 0.1)',
-                            fontWeight: '600',
-                            marginLeft: '15px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        {user?.name?.[0] || <i className="fa-solid fa-user"></i>}
-                    </div>
                 </div>
             </div>
         </header>

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 // In-memory cache with TTL
 const cache = new Map();
-const CACHE_TTL = 60000; // 60 seconds
+const CACHE_TTL = 2000; // 2 seconds
 const pendingRequests = new Map(); // Request deduplication
 
 function getCached(symbol) {
@@ -142,7 +142,7 @@ export async function GET(request) {
             return NextResponse.json(quotes.filter(q => q !== null));
         }
     } catch (error) {
-        console.error('Quote API Error:', error);
+        // console.error('Quote API Error:', error);
         // Return graceful error response instead of 500
         return NextResponse.json({
             error: 'Unable to fetch quote data',

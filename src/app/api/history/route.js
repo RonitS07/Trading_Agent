@@ -9,30 +9,7 @@ export async function GET(request) {
         return NextResponse.json({ error: 'Symbol required' }, { status: 400 });
     }
 
-    if (symbol === 'PORTFOLIO') {
-        // Generate mock equity curve for "Portfolio Performance" requirement
-        // In a real app, this would fetch from a 'History' table.
-        const points = range === '1d' ? 24 : range === '1mo' ? 30 : 60;
-        const now = Date.now();
-        const hour = 3600000;
-        const day = 86400000;
-        const interval = range === '1d' ? hour : day;
 
-        // Base value (let's assume starting at 100k)
-        let baseValue = 100000;
-        const history = [];
-
-        for (let i = points; i >= 0; i--) {
-            const time = now - (i * interval);
-            // Add some "realistic" random walk
-            baseValue = baseValue * (1 + (Math.random() * 0.04 - 0.018));
-            history.push({
-                time,
-                price: parseFloat(baseValue.toFixed(2))
-            });
-        }
-        return NextResponse.json(history);
-    }
 
     // Map range to interval
     const rangeMap = {

@@ -3,113 +3,163 @@
 import { useState, useRef, useEffect } from 'react';
 
 // Constant for symbol detection
-const STOP_WORDS = ['THE', 'FOR', 'AND', 'WHAT', 'SELL', 'BUY', 'WITH', 'YOUR', 'THIS', 'THAT', 'FROM', 'HOW', 'PRICE', 'CHART', 'STOCK', 'PLANS', 'SHOULD', 'ABOUT'];
+import { calculateRSI, calculateSMA } from '@/lib/indicators';
+
+// Constant for symbol detection
+const STOP_WORDS = [
+    'THE', 'FOR', 'AND', 'WHAT', 'SELL', 'BUY', 'WITH', 'YOUR', 'THIS', 'THAT', 'FROM', 'HOW', 'PRICE', 'CHART', 'STOCK', 'PLANS', 'SHOULD', 'ABOUT',
+    'HELLO', 'HI', 'HEY', 'WHO', 'ARE', 'YOU', 'TELL', 'ME', 'WHICH', 'WAS', 'IS', 'IT', 'IN', 'ON', 'OF', 'TO', 'MY', 'DO', 'CAN', 'WILL', 'BE',
+    'HAVE', 'HAS', 'HAD', 'NOT', 'BUT', 'YEAH', 'OK', 'OKAY', 'THANKS', 'THANK', 'PLEASE', 'GIVE', 'SHOW', 'WHERE', 'WHEN', 'WHY', 'NOW', 'JUST',
+    'GET', 'MAKE', 'KNOW', 'THINK', 'TIME', 'GOOD', 'BAD', 'LOOK', 'SEE', 'WANT', 'OUT', 'UP', 'DOWN', 'LEFT', 'RIGHT', 'SHARE'
+];
+
 const ActionPlanner = {
     TEMPLATES: {
         OPENINGS: [
-            "Analyzing market liquidity and order flow for your query.",
-            "Synthesizing technical signals with your current exposure.",
-            "Market volatility is peaking. Here's my strategic assessment.",
-            "Running simulations on current price action and historical support.",
-            "TradePilot AI is processing your request with real-time data."
+            "Processing real-time technicals...",
+            "Analyzing market structure...",
+            "Synthesizing order flow and momentum...",
+            "Calculating key pivot points..."
         ],
         FOLLOW_UPS: [
-            "Do you want to hedge this with index futures?",
-            "Should we set an automated trailing stop-loss for this?",
-            "Are you comfortable with the current margin requirements?",
-            "Would you like to see a risk/reward heat map for this entry?",
-            "Is capital preservation your primary objective today?"
+            "Check the 4H chart for confirmation.",
+            "Consider a trailing stop to lock profits.",
+            "Watch for volume spikes at the breakout level.",
+            "Is this fitting your risk profile?",
         ]
     },
     getRandom(list) {
         return list[Math.floor(Math.random() * list.length)];
     },
-    generate(userInput, stock = null, user = null) {
+
+    async analyze(symbol, contextStock, user, historyData = []) {
+        // 1. Calculate Indicators
+        let rsiVal = 50;
+        let smaVal = 0;
+        let trend = "NEUTRAL";
+
+        if (historyData.length > 20) {
+            const rsiSeries = calculateRSI(historyData, 14);
+            const smaSeries = calculateSMA(historyData, 20);
+
+            if (rsiSeries.length > 0) rsiVal = rsiSeries[rsiSeries.length - 1].value;
+            if (smaSeries.length > 0) smaVal = smaSeries[smaSeries.length - 1].value;
+        }
+
+        const price = contextStock?.price || (historyData.length > 0 ? historyData[historyData.length - 1].price : 0);
+
+        // 2. Determine Bias
+        let action = "HOLD";
+        let zone = "";
+        let reasoning = "";
+
+        // Strategy Logic
+        if (rsiVal > 70) {
+            action = "SELL / WAIT";
+            reasoning = `For **${symbol}**, RSI is currently ${rsiVal.toFixed(1)} (OVERSOLD). Momentum is stretched.`;
+            if (price > smaVal) reasoning += ` Although price is above 20 SMA (₹${smaVal.toFixed(2)}), the trend checks indicate caution.`;
+            zone = `Below ₹${(price * 0.99).toFixed(2)}`;
+        } else if (rsiVal < 30) {
+            action = "BUY / ACCUMULATE";
+            reasoning = `**${symbol}** is in OVERSOLD territory (RSI ${rsiVal.toFixed(1)}). Good risk/reward for a bounce.`;
+            zone = `Current Levels (₹${price.toFixed(2)})`;
+        } else {
+            // Mid Range
+            if (price > smaVal) {
+                action = "BUY DIP";
+                reasoning = `**${symbol}** Uptrend confirmed (Price > 20 SMA). RSI (${rsiVal.toFixed(1)}) has room to run.`;
+                zone = `Near SMA: ₹${smaVal.toFixed(2)}`;
+            } else {
+                action = "SELL RALLY";
+                reasoning = `**${symbol}** shows visible weakness (Price < 20 SMA). RSI (${rsiVal.toFixed(1)}) is neutral/bearish.`;
+                zone = `Resistance: ₹${smaVal.toFixed(2)}`;
+            }
+        }
+
+        // Portfolio Integration
+        const holdings = user?.portfolio || [];
+        const currentHolding = holdings.find(h => h.symbol === symbol);
+        if (currentHolding) {
+            reasoning = `[Holding ${currentHolding.qty} @ ₹${currentHolding.avgCost.toFixed(2)}] ` + reasoning;
+        }
+
+        return {
+            isGeneral: false,
+            action,
+            reasoning,
+            zone,
+            followUp: this.getRandom(this.TEMPLATES.FOLLOW_UPS)
+        };
+    },
+
+    generateGeneral(userInput, user) {
         const goal = userInput.toLowerCase();
         const holdings = user?.portfolio || [];
-        const currentHolding = stock ? holdings.find(h => h.symbol === stock.symbol) : null;
 
-        // Portfolio-related queries
-        if (goal.includes("portfolio") || goal.includes("balance") || goal.includes("holdings") || goal.includes("my shares") || goal.includes("net worth")) {
+        // 1. Portfolio/Account Queries
+        if (goal.includes("portfolio") || goal.includes("balance") || goal.includes("funds")) {
             if (!user) return { isGeneral: true, content: "<p>Please login to view portfolio insights.</p>" };
-            if (holdings.length === 0) return { isGeneral: true, content: "<p>Your portfolio is currently empty. Start by adding a blue-chip stock from the sidebar.</p>" };
-
-            const summary = holdings.map(h => `${h.symbol} (${h.qty} shares)`).join(', ');
+            const summary = holdings.map(h => `${h.symbol}`).join(', ');
             return {
                 isGeneral: true,
                 content: `
                     <div class="portfolio-insight">
-                        <div class="insight-title">PORTFOLIO OVERVIEW</div>
-                        <p>You currently have exposure in: <strong>${summary}</strong>.</p>
-                        <p>Your total cash balance is ₹${(user?.balance || 0).toLocaleString('en-IN')}. Diversification into defensive sectors is recommended given current market sentiment.</p>
+                        <div class="insight-title">PORTFOLIO INTELLIGENCE</div>
+                        <p><strong>Active Assets:</strong> ${summary || 'No active positions detected.'}</p>
+                        <p><strong>Available Capital:</strong> ₹${(user?.balance || 0).toLocaleString('en-IN')}</p>
                     </div>
                 `
             };
         }
 
-        // Strategy queries with a selected stock
-        if (stock && (
-            goal.includes("buy") || goal.includes("sell") || goal.includes("strategy") ||
-            goal.includes("plan") || goal.includes("trade") || goal.includes("target") ||
-            goal.includes("tell") || goal.includes("about") || goal.includes("review") ||
-            goal.includes("predict") || goal.includes("forecast") || goal.includes("outlook") ||
-            goal.includes("analysis") || goal.includes("thoughts")
-        )) {
-            const price = stock.price || 0;
-            const change = stock.changePct || 0;
-            let horizon = "SWING";
-            if (goal.includes("intraday") || goal.includes("short")) horizon = "INTRADAY";
-            if (goal.includes("long") || goal.includes("year") || goal.includes("investment")) horizon = "LONG-TERM";
-
-            const isSellIntent = goal.includes("sell") || goal.includes("exit") || goal.includes("profit");
-            let action = "HOLD";
-            let reasoning = "";
-            let zone = "";
-
-            if (currentHolding) {
-                reasoning = `You already hold ${currentHolding.qty} shares of ${stock.symbol} at an average of ₹${currentHolding.avgCost.toFixed(2)}. `;
-                if (isSellIntent) {
-                    action = "EXIT/REDUCE";
-                    zone = `₹${(price * 1.02).toFixed(2)}+`;
-                    reasoning += `Profit taking is advisable as the RSI indicates overbought levels for this ${horizon} position.`;
-                } else if (price < currentHolding.avgCost * 0.95) {
-                    action = "AVERAGE DOWN";
-                    zone = `₹${(price * 0.99).toFixed(2)} - ₹${price.toFixed(2)}`;
-                    reasoning += `Your position is currently down. Averaging here could lower your cost basis significantly.`;
-                } else {
-                    action = "HOLD/PYRAMID";
-                    zone = `₹${(price * 1.01).toFixed(2)}`;
-                    reasoning += `Momentum is strong. Consider adding to your winners.`;
-                }
-            } else {
-                if (isSellIntent) {
-                    action = "NEUTRAL";
-                    zone = "N/A";
-                    reasoning = `You don't have an active position in ${stock.symbol} to exit.`;
-                } else {
-                    action = "BUY/ENTER";
-                    zone = `₹${(price * 0.98).toFixed(2)} - ₹${price.toFixed(2)}`;
-                    reasoning = `${stock.symbol} setup looks favorable for a ${horizon} entry. Volume profile is increasing.`;
-                }
-            }
-
+        // 2. Greetings & Identity
+        if (goal.match(/^(hi|hello|hey|greetings)/)) {
             return {
-                isGeneral: false,
-                action,
-                reasoning,
-                zone,
-                followUp: this.getRandom(this.TEMPLATES.FOLLOW_UPS)
+                isGeneral: true,
+                content: `<p class="ai-text">Greetings, <strong>${user?.name || 'Trader'}</strong>. Systems are nominal. I am ready to analyze market data or execute trades on your command.</p>`
+            };
+        }
+        if (goal.includes("who are you") || goal.includes("what are you")) {
+            return {
+                isGeneral: true,
+                content: `<p class="ai-text">I am <strong>TradePilot AI</strong>, an advanced algorithmic trading assistant designed to provide real-time technical analysis, risk assessment, and execution strategies.</p>`
             };
         }
 
-        // General fallback for all other queries
+        // 3. Educational / Definitions
+        if (goal.includes("what is rsi")) {
+            return {
+                isGeneral: true,
+                content: `<p class="ai-text"><strong>RSI (Relative Strength Index)</strong> measures the speed and change of price movements. <br/><br/>• <strong>> 70</strong>: Overbought (Potential Sell)<br/>• <strong>< 30</strong>: Oversold (Potential Buy)</p>`
+            };
+        }
+        if (goal.includes("what is sma") || goal.includes("moving average")) {
+            return {
+                isGeneral: true,
+                content: `<p class="ai-text"><strong>SMA (Simple Moving Average)</strong> calculates the average price over a specific period (e.g., 20 days). It helps identify the trend direction. Price above SMA usually indicates an uptrend.</p>`
+            };
+        }
+
+        // 4. Help / Navigation
+        if (goal.includes("how to buy") || goal.includes("how to trade")) {
+            return {
+                isGeneral: true,
+                content: `<p class="ai-text">To execute a trade:<br/>1. Go to the <strong>Analysis Tab</strong>.<br/>2. Select a stock from the Watchlist.<br/>3. Use the Trade Panel on the right to set your Quantity and Price.</p>`
+            };
+        }
+
+        // 5. Default Fallback (Smarter)
+        const defaults = [
+            "I'm listening. You can ask me to analyze a stock, explain technical indicators, or check your portfolio.",
+            "Awaiting input. Try asking 'What is RSI?' or 'Analyze INFOSYS'.",
+            "Systems standing by. I can calculate real-time technicals for any NSE stock."
+        ];
+
         return {
             isGeneral: true,
             content: `
                 <div class="ai-general-reply">
-                    <p>${this.getRandom(this.TEMPLATES.OPENINGS)}</p>
-                    <p>I'm here to help with your trading strategy and portfolio management. You can ask about specific stocks, your current holdings, or general market sentiment.</p>
-                    <p style="opacity: 0.7; font-size: 0.8rem; margin-top: 10px;">TIP: Select a stock from the sidebar to get a detailed execution strategy.</p>
+                    <p>${defaults[Math.floor(Math.random() * defaults.length)]}</p>
                 </div>
             `
         };
@@ -118,7 +168,7 @@ const ActionPlanner = {
 
 export default function AIChat({ selectedStockData, user }) {
     const [messages, setMessages] = useState([
-        { role: 'ai', content: 'TradePilot AI Strategy Engine online. How can I assist with your portfolio today?' }
+        { role: 'ai', content: 'TradePilot AI Strategy Engine online. I can calculate Real-Time RSI & SMA. Name a stock.' }
     ]);
     const [input, setInput] = useState('');
     const [isThinking, setIsThinking] = useState(false);
@@ -142,114 +192,100 @@ export default function AIChat({ selectedStockData, user }) {
         setInput('');
         setIsThinking(true);
 
-        // Improved symbol detection: only trigger if it's clearly a ticker query
         const words = currentInput.toUpperCase().replace(/[?!.]/g, '').split(/\s+/);
 
-        // Check if this is a clear ticker symbol query:
-        // 1. Single word query (e.g., "RELIANCE"), OR
-        // 2. Contains buy/sell keywords with a symbol-like word
-        const isSingleWord = words.length === 1;
-        const hasBuySellKeyword = currentInput.toLowerCase().includes('buy ') ||
-            currentInput.toLowerCase().includes('sell ') ||
-            currentInput.toLowerCase().includes('strategy for ') ||
-            currentInput.toLowerCase().includes('about ');
+        // 1. Check for Conversational/General Queries FIRST
+        const generalResponse = ActionPlanner.generateGeneral(currentInput, user);
+        // We need a way to know if generateGeneral matched a specific rule or just returned the random fallback.
+        // Let's modify generateGeneral to flag this, or just check the content slightly.
+        // Actually, the best way is to see if we CAN find a symbol. If we find a symbol, we prefer that UNLESS it's clearly a greeting.
 
+        // Let's rely on an expanded STOP_WORDS list and better logic.
+        const conversationalTriggers = ['HI', 'HELLO', 'HEY', 'WHO', 'WHAT', 'HOW', 'THANKS', 'THANK'];
+        const isConversational = words.some(w => conversationalTriggers.includes(w));
+
+        // Heuristic: finding capitalized words of length 3-10 that aren't stop words
         let potentialSymbol = null;
-
-        // Only look for symbols if it's a single word OR has buy/sell context
-        if (isSingleWord && words[0].length >= 3 && words[0].length <= 10 && !STOP_WORDS.includes(words[0])) {
-            potentialSymbol = words[0];
-        } else if (hasBuySellKeyword) {
-            // Find the most likely symbol (all caps, 3-10 chars, not a stop word)
-            potentialSymbol = words.find(w =>
-                w.length >= 3 &&
-                w.length <= 10 &&
-                !STOP_WORDS.includes(w) &&
-                w === w.toUpperCase() // Must be all uppercase
-            );
+        if (!isConversational) {
+            potentialSymbol = words.find(w => w.length >= 3 && w.length <= 10 && !STOP_WORDS.includes(w) && w === w.toUpperCase());
         }
 
-        // Simulate AI thinking
-        setTimeout(async () => {
-            setIsThinking(false);
-            try {
-                let contextStock = selectedStockData;
+        // If context exists and user says "this stock" or "analysis", use context
+        if (!potentialSymbol && selectedStockData && (currentInput.toLowerCase().includes('this') || currentInput.toLowerCase().includes('analysis'))) {
+            potentialSymbol = selectedStockData.symbol;
+        }
 
-                // If the user mentioned a symbol, try to fetch its data if needed
+        setTimeout(async () => {
+            try {
                 if (potentialSymbol) {
-                    // Only fetch if it differs from context or context is missing
-                    if (!selectedStockData || !selectedStockData.symbol.includes(potentialSymbol)) {
-                        try {
-                            const searchRes = await fetch(`/api/search?q=${potentialSymbol}`);
-                            const searchData = await searchRes.json();
-                            if (searchData.length > 0) {
-                                const exactSymbol = searchData[0].symbol;
-                                const quoteRes = await fetch(`/api/quote?symbol=${exactSymbol}`);
-                                contextStock = await quoteRes.json();
-                            } else {
-                                // CASE: Symbol mentioned but not found.
-                                // STOP here. Do not fallback to selectedStockData, as that is confusing.
-                                setMessages(prev => [...prev, { role: 'ai', content: `<p>I couldn't identify market data for <strong>${potentialSymbol}</strong>. Please try using the correct NSE ticker symbol.</p>` }]);
-                                return;
-                            }
-                        } catch (err) {
-                            // On network error also stop
-                            setMessages(prev => [...prev, { role: 'ai', content: `<p>Comparison data unavailable at the moment.</p>` }]);
+                    // Fetch History for Technicals
+                    const res = await fetch(`/api/history?symbol=${potentialSymbol}&range=1mo`); // 1mo range for reasonable SMA20
+                    const history = await res.json();
+
+                    // Fetch Quote if needed
+                    let stockInfo = selectedStockData;
+                    if (!stockInfo || stockInfo.symbol !== potentialSymbol) {
+                        const qRes = await fetch(`/api/quote?symbol=${potentialSymbol}`);
+                        // If 404, assume it wasn't a stock after all and fall back to general
+                        if (!qRes.ok) {
+                            const res = ActionPlanner.generateGeneral(currentInput, user);
+                            setMessages(prev => [...prev, { role: 'ai', content: res.content }]);
                             return;
                         }
+                        stockInfo = await qRes.json();
                     }
-                }
 
-                const res = ActionPlanner.generate(currentInput, contextStock, user);
-                let aiContent = "";
-                if (res.isGeneral) {
-                    aiContent = res.content;
-                } else {
-                    aiContent = `
+                    const analysis = await ActionPlanner.analyze(potentialSymbol, stockInfo, user, Array.isArray(history) ? history : []);
+
+                    const aiContent = `
                         <div class="ai-response-futuristic">
                             <div class="strategy-header">
                                 <i class="fa-solid fa-microchip"></i>
-                                <span>${res.action || 'NEUTRAL'} STRATEGY: ${contextStock?.symbol || ''}</span>
+                                <span>${analysis.action}: ${potentialSymbol}</span>
                             </div>
-                            <p class="strategy-reasoning">${res.reasoning || 'No specific reasoning available for this setup.'}</p>
+                            <p class="strategy-reasoning">${analysis.reasoning}</p>
                             <div class="strategy-zone">
-                                <span class="z-label">EXECUTION ZONE:</span>
-                                <span class="z-val">${res.zone || 'N/A'}</span>
+                                <span class="z-label">TARGET ZONE:</span>
+                                <span class="z-val">${analysis.zone}</span>
                             </div>
-                            <div class="intent-discovery-v2">${res.followUp || ''}</div>
+                            <div class="intent-discovery-v2">${analysis.followUp}</div>
                         </div>
                     `;
+                    setMessages(prev => [...prev, { role: 'ai', content: aiContent }]);
+
+                } else {
+                    // General fallback
+                    // Start by checking if we have a specific conversational answer
+                    const res = ActionPlanner.generateGeneral(currentInput, user);
+                    setMessages(prev => [...prev, { role: 'ai', content: res.content }]);
                 }
-                setMessages(prev => [...prev, { role: 'ai', content: aiContent }]);
             } catch (err) {
-                // Silent error
-                // console.error("AI Generation Error:", err);
-                setMessages(prev => [...prev, { role: 'ai', content: "<p>I encountered an error processing that request. Please try selecting a stock or rephrasing.</p>" }]);
+                // If error, fall back to general
+                const res = ActionPlanner.generateGeneral(currentInput, user);
+                setMessages(prev => [...prev, { role: 'ai', content: res.content }]);
+            } finally {
+                setIsThinking(false);
             }
-        }, 600);
+        }, 800);
     };
 
-    const suggestions = [
-        "Analyze my portfolio health",
-        "Market sentiment outlook",
-        "Strategy for RELIANCE",
-        "Risk management advice"
-    ];
+    // ... (Keep existing UI rendering)
+    const suggestions = ["Analyze RELIANCE", "Portfolio Status", "Strategy for TATASTEEL", "Market Outlook"];
 
-    const handleSuggestionClick = (suggestion) => {
-        setInput(suggestion);
-        // Optional: auto-submit or let user edit
-    };
+    // ... helper for chips
+    const handleSuggestionClick = (s) => setInput(s);
 
     return (
         <div className="ai-planner-view">
             <div className="chat-container-modern">
+                {/* Header & Status - existing code */}
                 <div className="chat-header-v2">
                     <div className="ai-status">
                         <div className="status-pulse"></div>
                         STRATEGY ENGINE ACTIVE
                     </div>
                 </div>
+
                 <div className="chat-history-v2">
                     {messages.map((m, i) => (
                         <div key={i} className={`chat-bubble-v2 ${m.role}`} style={{ animationDelay: `${i * 0.1}s` }}>
@@ -269,11 +305,8 @@ export default function AIChat({ selectedStockData, user }) {
                 </div>
 
                 {/* Suggestion Chips */}
-                <div style={{ display: 'flex', gap: '8px', padding: '10px 15px', overflowX: 'auto', background: 'rgba(15, 23, 42, 0.3)', msOverflowStyle: 'none', scrollbarWidth: 'none' }} className="no-scrollbar-chips">
-                    <style jsx>{`
-                        .no-scrollbar-chips::-webkit-scrollbar { display: none; }
-                    `}</style>
-                    {suggestions.map((s, i) => (
+                <div style={{ display: 'flex', gap: '8px', padding: '10px 15px', overflowX: 'auto', background: 'rgba(15, 23, 42, 0.3)' }} className="no-scrollbar-chips">
+                    {["Analyze RELIANCE", "Strategy for TATASTEEL (RSI)", "Market Outlook"].map((s, i) => (
                         <button
                             key={i}
                             onClick={() => handleSuggestionClick(s)}
@@ -285,8 +318,7 @@ export default function AIChat({ selectedStockData, user }) {
                                 color: 'var(--accent-cyan)',
                                 fontSize: '0.75rem',
                                 whiteSpace: 'nowrap',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease'
+                                cursor: 'pointer'
                             }}
                         >
                             {s}
@@ -299,11 +331,9 @@ export default function AIChat({ selectedStockData, user }) {
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Ask for strategy, portfolio insights, or market bias..."
+                        placeholder="Ask for strategy (e.g., 'Analyze WIPRO')..."
                     />
-                    <button type="submit">
-                        <i className="fa-solid fa-bolt"></i>
-                    </button>
+                    <button type="submit"><i className="fa-solid fa-bolt"></i></button>
                 </form>
             </div>
         </div>

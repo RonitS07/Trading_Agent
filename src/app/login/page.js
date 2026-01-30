@@ -45,6 +45,12 @@ function LoginForm() {
                     router.refresh();
                 }, 800);
             } else {
+                // Email regex validation
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(form.email)) {
+                    throw new Error("Invalid email format. Please use a valid email address.");
+                }
+
                 const res = await fetch('/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -83,7 +89,7 @@ function LoginForm() {
                     <div className={styles.welcomeCard}>
                         <div className={styles.missionHeader}>MISSION BRIEFING</div>
                         <div className={styles.avatarBig}>{form.name?.[0] || 'A'}</div>
-                        <h2>Agent {form.name}</h2>
+                        <h2>{form.name}</h2>
                         <p>Identity established successfully.</p>
                         <div className={styles.briefBox}>
                             <div className={styles.briefLabel}>INITIAL ALLOCATION</div>

@@ -5,16 +5,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 
-async function getCurrentPrice(symbol) {
-    try {
-        const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`, {
-            headers: { 'User-Agent': 'Mozilla/5.0' },
-            next: { revalidate: 0 }
-        });
-        const data = await res.json();
-        return data.chart?.result?.[0]?.meta?.regularMarketPrice || null;
-    } catch { return null; }
-}
+
 
 export async function GET(request) {
     const session = await getServerSession(authOptions);
@@ -31,21 +22,49 @@ export async function GET(request) {
             }
         });
 
-        // 2. Lazy Execution Check
-        // For each open order, check current price and execute if condition met
+        if (openOrders.length === 0) {
+            return NextResponse.json([]);
+        }
+
+        // 2. Batch Price Fetch
+        const symbolsToCheck = [...new Set(openOrders.map(o => o.symbol))];
+        const quoteMap = {};
+
+        try {
+            const query = symbolsToCheck.join(',');
+            // Reuse the quote logic directly or fetch the endpoint internally?
+            // Since this is server-side, it's better to reuse a helper if we had one.
+            // But for now, we'll fetch the yahoo endpoint directly as `getCurrentPrice` did, but in batch.
+            const res = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${query}`, {
+                headers: { 'User-Agent': 'Mozilla/5.0' },
+                next: { revalidate: 0 }
+            });
+            const data = await res.json();
+            const results = data.quoteResponse?.result || [];
+            results.forEach(q => {
+                quoteMap[q.symbol] = q.regularMarketPrice;
+            });
+        } catch (e) {
+            // console.error("Batch price check failed", e);
+        }
+
+        // 3. Execution Check
         const updatedOrders = [];
         let executedCount = 0;
 
         for (const order of openOrders) {
             let shouldExecute = false;
-            const currentPrice = await getCurrentPrice(order.symbol);
+            const currentPrice = quoteMap[order.symbol];
 
             if (currentPrice) {
                 if (order.type === 'LIMIT' && order.limitPrice) {
                     if (order.action === 'BUY' && currentPrice <= order.limitPrice) shouldExecute = true;
                     if (order.action === 'SELL' && currentPrice >= order.limitPrice) shouldExecute = true;
                 }
-                // Add SL logic if needed
+                // Stop Loss Logic (simplified)
+                if (order.type === 'SL' && order.stopPrice) {
+                    if (order.action === 'SELL' && currentPrice <= order.stopPrice) shouldExecute = true;
+                }
             }
 
             if (shouldExecute) {
@@ -54,23 +73,20 @@ export async function GET(request) {
                     // Update Order Status
                     await tx.trade.update({
                         where: { id: order.id },
-                        data: { status: 'EXECUTED', price: order.limitPrice } // Execute at limit price
+                        data: { status: 'EXECUTED', price: order.limitPrice || order.stopPrice || currentPrice } // Execute at limit/stop price or better
                     });
 
                     // Update Portfolio
-                    // Fetch user again to be safe? Or assume logic holds.
-                    // Need to replicate portfolio logic from trade/route.js
-                    // Ideally this logic should be a shared lib function.
-                    // For MVP, we duplicate briefly or keep concise.
-
+                    // Fetch existing holding
                     const existing = await tx.portfolio.findUnique({
                         where: { userId_symbol: { userId, symbol: order.symbol } }
                     });
 
                     if (order.action === 'BUY') {
+                        const price = order.limitPrice || currentPrice;
                         if (existing) {
                             const totalQty = existing.qty + order.qty;
-                            const totalCostBasis = (existing.qty * existing.avgCost) + (order.qty * order.limitPrice);
+                            const totalCostBasis = (existing.qty * existing.avgCost) + (order.qty * price);
                             const newAvg = totalCostBasis / totalQty;
                             await tx.portfolio.update({
                                 where: { id: existing.id },
@@ -78,14 +94,14 @@ export async function GET(request) {
                             });
                         } else {
                             await tx.portfolio.create({
-                                data: { userId, symbol: order.symbol, qty: order.qty, avgCost: order.limitPrice }
+                                data: { userId, symbol: order.symbol, qty: order.qty, avgCost: price }
                             });
                         }
                     } else {
                         // SELL
                         if (existing) {
                             const newQty = existing.qty - order.qty;
-                            if (newQty <= 0) { // Safety <=
+                            if (newQty <= 0) {
                                 await tx.portfolio.delete({ where: { id: existing.id } });
                             } else {
                                 await tx.portfolio.update({
@@ -93,6 +109,15 @@ export async function GET(request) {
                                     data: { qty: newQty }
                                 });
                             }
+
+                            // Return Proceeds to Balance
+                            // Assuming we deducted stock, we need to add cash
+                            const proceeds = order.qty * (order.limitPrice || order.stopPrice || currentPrice);
+                            const user = await tx.user.findUnique({ where: { id: userId } });
+                            await tx.user.update({
+                                where: { id: userId },
+                                data: { balance: user.balance + proceeds }
+                            });
                         }
                     }
                 });
@@ -102,7 +127,6 @@ export async function GET(request) {
             }
         }
 
-        // Return remaining OPEN orders
         return NextResponse.json(updatedOrders);
 
     } catch (error) {

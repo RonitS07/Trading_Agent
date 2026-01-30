@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import AIChat from './AIChat';
+import MobileOnboarding from './MobileOnboarding';
 import { ChartSkeleton } from './LoadingSkeleton';
 
 import { usePortfolioContext } from '@/components/Providers';
@@ -27,7 +28,6 @@ export default function MobileTerminal({ user, onProfile, onLogout, onTradeCompl
 
     const ranges = [
         { label: '1D', value: '1d' },
-        { label: '1W', value: '1w' },
         { label: '1M', value: '1mo' },
         { label: '6M', value: '6mo' },
         { label: '5Y', value: '5y' },
@@ -55,11 +55,30 @@ export default function MobileTerminal({ user, onProfile, onLogout, onTradeCompl
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
 
-    // Load watchlist from local storage
+    // Onboarding State
+    const [showOnboarding, setShowOnboarding] = useState(false);
+
+    // Initial Load & Onboarding Check
     useEffect(() => {
         const saved = localStorage.getItem('tp_watchlist');
         if (saved) setWatchlist(JSON.parse(saved));
-    }, []);
+
+        // Check onboarding (User Specific)
+        // If user is logged in, use their ID. If guest, use 'guest' or skip (assuming signup implies user exists)
+        const userId = user?.id || 'guest';
+        const key = `tp_onboarding_completed_${userId}`;
+        const hasOnboarded = localStorage.getItem(key);
+
+        if (!hasOnboarded) {
+            setShowOnboarding(true);
+        }
+    }, [user?.id]); // Re-run if user changes (e.g. login/signup)
+
+    const handleOnboardingComplete = () => {
+        setShowOnboarding(false);
+        const userId = user?.id || 'guest';
+        localStorage.setItem(`tp_onboarding_completed_${userId}`, 'true');
+    };
 
     // Search Debounce Logic
     useEffect(() => {
@@ -93,20 +112,36 @@ export default function MobileTerminal({ user, onProfile, onLogout, onTradeCompl
         setSearchQuery('');
     };
 
-    const toggleWatchlist = (e, symbol) => {
+    const toggleWatchlist = async (e, symbol) => {
         e.stopPropagation();
         let newWatchlist;
-        if (watchlist.includes(symbol)) {
+        const isRemoving = watchlist.includes(symbol);
+
+        if (isRemoving) {
             newWatchlist = watchlist.filter(s => s !== symbol);
         } else {
             newWatchlist = [...watchlist, symbol];
         }
         setWatchlist(newWatchlist);
         localStorage.setItem('tp_watchlist', JSON.stringify(newWatchlist));
+
+        // Sync with API
+        if (user) {
+            try {
+                await fetch('/api/watchlist', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol, action: isRemoving ? 'REMOVE' : 'ADD' })
+                });
+            } catch (e) { /* silent */ }
+        }
     };
 
     return (
-        <div className="mobile-app-theme" style={{ color: 'white', minHeight: '100vh', paddingBottom: '80px', position: 'relative', fontFamily: 'Inter, sans-serif' }}>
+        <div className="mobile-app-theme" style={{ color: 'white', minHeight: '100dvh', paddingBottom: 'calc(120px + env(safe-area-inset-bottom, 0px))', position: 'relative', fontFamily: 'Inter, sans-serif' }}>
+
+            {showOnboarding && <MobileOnboarding onComplete={handleOnboardingComplete} />}
+
             {/* Header */}
             <header className="m-top-bar" style={{ padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(2, 6, 23, 0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)', position: 'sticky', top: 0, zIndex: 50 }}>
                 <div
@@ -163,6 +198,8 @@ export default function MobileTerminal({ user, onProfile, onLogout, onTradeCompl
                         user={user}
                         onTradeComplete={onTradeComplete}
                         marketStatus={marketStatus}
+                        watchlist={watchlist}
+                        toggleWatchlist={toggleWatchlist}
                     />
                 )}
 
@@ -182,24 +219,72 @@ export default function MobileTerminal({ user, onProfile, onLogout, onTradeCompl
                 )}
             </main>
 
-            {/* Bottom Nav */}
-            <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(15px)', display: 'flex', justifyContent: 'space-around', padding: '15px', borderTop: '1px solid rgba(255,255,255,0.05)', zIndex: 100 }}>
-                <button onClick={() => setActiveView('home')} style={{ background: 'none', border: 'none', color: activeView === 'home' ? 'var(--accent-cyan)' : '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                    <i className="fa-solid fa-house" style={{ fontSize: '1.2rem' }}></i>
-                    {activeView === 'home' && <span style={{ fontSize: '0.6rem', fontWeight: 'bold' }}>Home</span>}
-                </button>
-                <button onClick={() => setActiveView('analysis')} style={{ background: 'none', border: 'none', color: activeView === 'analysis' ? 'var(--accent-cyan)' : '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                    <i className="fa-solid fa-chart-line" style={{ fontSize: '1.2rem' }}></i>
-                    {activeView === 'analysis' && <span style={{ fontSize: '0.6rem', fontWeight: 'bold' }}>Analysis</span>}
-                </button>
-                <button onClick={() => setActiveView('ai')} style={{ background: 'none', border: 'none', color: activeView === 'ai' ? 'var(--accent-cyan)' : '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                    <i className="fa-solid fa-robot" style={{ fontSize: '1.2rem' }}></i>
-                    {activeView === 'ai' && <span style={{ fontSize: '0.6rem', fontWeight: 'bold' }}>AI</span>}
-                </button>
-                <button onClick={() => setActiveView('assets')} style={{ background: 'none', border: 'none', color: activeView === 'assets' ? 'var(--accent-cyan)' : '#64748b', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                    <i className="fa-solid fa-briefcase" style={{ fontSize: '1.2rem' }}></i>
-                    {activeView === 'assets' && <span style={{ fontSize: '0.6rem', fontWeight: 'bold' }}>Wallet</span>}
-                </button>
+            {/* Bottom Blur Mask */}
+            <div style={{
+                position: 'fixed',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 'calc(80px + env(safe-area-inset-bottom, 0px))',
+                background: 'linear-gradient(to top, #020617 30%, rgba(2,6,23, 0.8) 70%, rgba(2,6,23, 0) 100%)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                pointerEvents: 'none',
+                zIndex: 90
+            }} />
+
+            {/* Floating Glowing Bottom Nav with Safe Area Support */}
+            <nav style={{
+                position: 'fixed',
+                bottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
+                left: '20px',
+                right: '20px',
+                background: 'rgba(5, 10, 20, 0.99)',
+                backdropFilter: 'blur(40px) saturate(200%)',
+                WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+                display: 'flex',
+                justifyContent: 'space-around',
+                padding: '10px 6px',
+                borderRadius: '24px',
+                border: '1px solid rgba(6, 182, 212, 0.25)',
+                boxShadow: '0 0 40px rgba(6, 182, 212, 0.12), 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
+                zIndex: 100
+            }}>
+                {[
+                    { id: 'home', icon: 'fa-house', label: 'Home' },
+                    { id: 'analysis', icon: 'fa-chart-line', label: 'Trade' },
+                    { id: 'ai', icon: 'fa-robot', label: 'AI' },
+                    { id: 'assets', icon: 'fa-briefcase', label: 'Wallet' }
+                ].map(tab => {
+                    const isActive = activeView === tab.id;
+                    return (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveView(tab.id)}
+                            style={{
+                                background: isActive ? 'linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(6, 182, 212, 0.15))' : 'transparent',
+                                border: 'none',
+                                color: isActive ? '#06d6d6' : 'rgba(148, 163, 184, 0.6)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '3px',
+                                padding: '8px 16px',
+                                borderRadius: '16px',
+                                transition: 'all 0.25s ease',
+                                boxShadow: isActive ? '0 0 20px rgba(6, 182, 212, 0.35), inset 0 0 12px rgba(6, 182, 212, 0.1)' : 'none',
+                                transform: isActive ? 'scale(1.05)' : 'scale(1)',
+                                opacity: isActive ? 1 : 0.7
+                            }}
+                        >
+                            <i className={`fa-solid ${tab.icon}`} style={{
+                                fontSize: '1.15rem',
+                                textShadow: isActive ? '0 0 12px rgba(6, 182, 212, 0.8)' : 'none'
+                            }}></i>
+                            <span style={{ fontSize: '0.6rem', fontWeight: isActive ? '800' : '600', letterSpacing: '0.3px' }}>{tab.label}</span>
+                        </button>
+                    );
+                })}
             </nav>
 
             {/* SEARCH OVERLAY */}

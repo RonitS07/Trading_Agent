@@ -1,2 +1,0 @@
-127.0.0.1 - - [14/Jan/2026 10:14:35] "GET /api/quote?symbol=RELIANCE.NS HTTP/1.1" 200 -
-127.0.0.1 - - [14/Jan/2026 10:15:09] "GET /api/history?symbol=RELIANCE.NS&range=1d HTTP/1.1" 200 -

@@ -1,83 +1,29 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
+import { usePriceContext } from '@/components/PriceContext';
 
 export function useLivePrices(symbols) {
-    const [prices, setPrices] = useState({});
-    const symbolsRef = useRef(symbols);
+    const { prices, subscribe, unsubscribe } = usePriceContext();
 
-    // Keep ref updated to avoid effect re-triggering just on array reference change
+    // Convert input to stable array
+    const symbolList = useMemo(() => {
+        if (!symbols) return [];
+        return Array.isArray(symbols) ? symbols : [symbols];
+    }, [JSON.stringify(symbols)]);
+
     useEffect(() => {
-        symbolsRef.current = symbols;
-    }, [symbols]);
+        if (symbolList.length > 0) {
+            subscribe(symbolList);
+            // unsubscribe is optional/noop for now based on our context logic, 
+            // but robust implementation would call it:
+            // return () => unsubscribe(symbolList);
+        }
+    }, [symbolList]); // subscribe is stable
 
-    useEffect(() => {
-        let isMounted = true;
+    // Filter prices to return only requested
+    const result = {};
+    symbolList.forEach(s => {
+        if (prices[s]) result[s] = prices[s];
+    });
 
-        const fetchPrices = async () => {
-            const currentSymbols = symbolsRef.current;
-            if (!currentSymbols || currentSymbols.length === 0) return;
-
-            try {
-                const uniqueSymbols = [...new Set(currentSymbols)];
-                const query = uniqueSymbols.join(',');
-                const res = await fetch(`/api/quote?symbol=${query}`);
-                const data = await res.json();
-
-                if (!isMounted) return;
-
-                const newPrices = {};
-                if (Array.isArray(data)) {
-                    data.forEach(q => newPrices[q.symbol] = q);
-                } else if (data && data.symbol) {
-                    newPrices[data.symbol] = data;
-                }
-
-                // Merge with existing to preserve any data not returned in this specific partial fetch (if any)
-                setPrices(prev => ({ ...prev, ...newPrices }));
-            } catch (e) {
-                console.error("Error fetching prices:", e);
-            }
-        };
-
-        const simulateLive = () => {
-            setPrices(prev => {
-                const next = { ...prev };
-                let hasChanges = false;
-
-                Object.keys(next).forEach(symbol => {
-                    const q = next[symbol];
-                    if (!q) return;
-
-                    // Simulate small random ticks
-                    const change = q.price * 0.0005 * (Math.random() - 0.5);
-                    const newPrice = q.price + change;
-
-                    // Don't update High/Low during simulation - only API should set these
-                    // This prevents infinite drift of these values
-                    next[symbol] = {
-                        ...q,
-                        price: newPrice,
-                        changePct: ((newPrice - q.prevClose) / q.prevClose) * 100
-                    };
-                    hasChanges = true;
-                });
-
-                return hasChanges ? next : prev;
-            });
-        };
-
-        // Initial fetch
-        fetchPrices();
-
-        // Intervals
-        const fetchInterval = setInterval(fetchPrices, 30000); // Poll API every 30s
-        const simInterval = setInterval(simulateLive, 1000);   // Simulate ticks every 1s
-
-        return () => {
-            isMounted = false;
-            clearInterval(fetchInterval);
-            clearInterval(simInterval);
-        };
-    }, [JSON.stringify(symbols)]); // Use stringified symbols to detect actual content changes
-
-    return prices;
+    return result;
 }

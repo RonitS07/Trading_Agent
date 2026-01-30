@@ -41,50 +41,63 @@ function StockChart({ symbol, range = '1d', holdings = EMPTY_ARRAY, trades = EMP
         if (!symbol) return;
 
         const effectiveKey = `${symbol}-${range}`;
-        if (symbol !== 'PORTFOLIO' && chartCache[effectiveKey]) {
-            setData(chartCache[effectiveKey]);
+        const now = Date.now();
+        const cached = chartCache[effectiveKey];
+
+        // Cache Logic: Use if exists and < 60s old
+        if (symbol !== 'PORTFOLIO' && cached && (now - cached.timestamp < 60000)) {
+            setData(cached.data);
             setLoading(false);
-            setOpacity(1); // Instant show
+            setOpacity(1);
             return;
         }
 
         setLoading(true);
-        setOpacity(0.5); // Dim if keeping old data
+        setOpacity(0.5);
+
+        const controller = new AbortController();
+        const signal = controller.signal;
 
         const fetchData = async () => {
             try {
                 // CASE 1: Composite Portfolio Chart
                 if (symbol === 'PORTFOLIO') {
-                    // Collect all unique symbols involved (current holdings + past trades)
+                    // ... (Portfolio logic kept same, simplified for brevity in replacement, assuming it doesn't need fetch signal often or is complex to abort deeply)
+                    // For safety, we can just check signal.aborted after await
+                    // Collect all unique symbols involved
                     const involvedSymbols = new Set(holdings.map(h => h.symbol));
                     trades.forEach(t => involvedSymbols.add(t.symbol));
                     const uniqueSymbols = Array.from(involvedSymbols);
 
                     if (uniqueSymbols.length === 0) {
-                        const now = Date.now();
+                        // ... Same mock zero logic
                         const interval = range === '1d' ? 60000 * 5 : 86400000;
                         const points = range === '1d' ? 75 : 30;
                         const mockZero = [];
                         for (let i = points; i >= 0; i--) {
                             mockZero.push({ time: now - (i * interval), price: currentBalance || 0 });
                         }
-                        setData(mockZero);
+                        if (!signal.aborted) setData(mockZero);
                         return;
                     }
 
                     // Fetch history for ALL involved symbols
+                    // IMPORTANT: We pass signal to fetches if possible, but our batch logic is hard to abort individually.
+                    // We'll just check aborted state.
                     const requests = uniqueSymbols.map(sym =>
-                        fetch(`/api/history?symbol=${sym}&range=${range}`).then(res => res.json())
+                        fetch(`/api/history?symbol=${sym}&range=${range}`, { signal }).then(res => res.json())
                     );
                     const results = await Promise.all(requests);
-                    const priceMap = {};
+                    if (signal.aborted) return;
 
+                    const priceMap = {};
                     results.forEach((res, i) => {
                         if (Array.isArray(res) && res.length > 0) {
                             priceMap[uniqueSymbols[i]] = res;
                         }
                     });
 
+                    // ... Reconstruct logic (same as before)
                     const validData = Object.values(priceMap)[0];
                     if (!validData) {
                         setData([]);
@@ -92,25 +105,20 @@ function StockChart({ symbol, range = '1d', holdings = EMPTY_ARRAY, trades = EMP
                     }
                     const masterTimeline = validData.map(d => d.time);
 
-                    // Reconstruct Portfolio Value logic
                     let runningCash = Number(currentBalance) || 0;
                     const runningHoldings = {};
                     holdings.forEach(h => runningHoldings[h.symbol] = Number(h.qty) || 0);
 
                     const sortedTrades = [...trades].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
                     const compositeData = [];
-                    // Iterate backwards from latest time to earliest
+
                     for (let i = masterTimeline.length - 1; i >= 0; i--) {
                         const t = masterTimeline[i];
-
-                        // "Undo" trades that happened *after* this timestamp
                         while (sortedTrades.length > 0 && new Date(sortedTrades[0].timestamp).getTime() > t) {
                             const trade = sortedTrades.shift();
                             const qty = Number(trade.quantity) || 0;
                             const tradePrice = Number(trade.price) || 0;
                             const cost = qty * tradePrice;
-
                             if (trade.type === 'BUY') {
                                 runningCash += cost;
                                 runningHoldings[trade.symbol] = (runningHoldings[trade.symbol] || 0) - qty;
@@ -119,53 +127,53 @@ function StockChart({ symbol, range = '1d', holdings = EMPTY_ARRAY, trades = EMP
                                 runningHoldings[trade.symbol] = (runningHoldings[trade.symbol] || 0) + qty;
                             }
                         }
-
                         let stockValue = 0;
                         for (const sym in runningHoldings) {
                             const qty = runningHoldings[sym];
                             if (qty > 0) {
                                 const hist = priceMap[sym];
                                 if (hist) {
-                                    // Find closest point to T (or use index i as generic approximation for intraday alignment)
                                     const point = hist[i] || hist.find(p => p.time === t);
                                     const price = point ? (Number(point.price) || 0) : 0;
                                     stockValue += qty * price;
                                 }
                             }
                         }
-
-                        // Final Safety Check
                         const totalEquity = runningCash + stockValue;
                         if (!isNaN(totalEquity)) {
                             compositeData.unshift({ time: t, price: totalEquity });
                         } else {
-                            // Fallback to previous known good value or 0 to prevent gap
                             const prev = compositeData[0] ? compositeData[0].price : 0;
                             compositeData.unshift({ time: t, price: prev });
                         }
                     }
-
                     setData(compositeData);
-
                 }
                 // CASE 2: Single Stock Chart
                 else {
-                    const res = await fetch(`/api/history?symbol=${symbol}&range=${range}`);
+                    const res = await fetch(`/api/history?symbol=${symbol}&range=${range}`, { signal });
                     const json = await res.json();
-                    if (Array.isArray(json)) {
-                        chartCache[effectiveKey] = json; // Cache the result
+                    if (!signal.aborted && Array.isArray(json)) {
+                        // Update Cache with Timestamp
+                        chartCache[effectiveKey] = { data: json, timestamp: Date.now() };
                         setData(json);
                     }
                 }
             } catch (err) {
-                // silent
+                if (err.name !== 'AbortError') {
+                    // console.error(err);
+                }
             } finally {
-                setLoading(false);
-                setTimeout(() => setOpacity(1), 50); // Trigger fade in
+                if (!signal.aborted) {
+                    setLoading(false);
+                    setTimeout(() => setOpacity(1), 50);
+                }
             }
         };
 
         fetchData();
+
+        return () => controller.abort();
     }, [symbol, range, holdings, trades, currentBalance]);
 
     // Compute Indicators
@@ -209,24 +217,26 @@ function StockChart({ symbol, range = '1d', holdings = EMPTY_ARRAY, trades = EMP
 
     return (
         <div style={{ position: 'relative' }}>
-            {/* Indicator Toggles */}
-            <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 10, display: 'flex', gap: '5px' }}>
-                <button
-                    onClick={() => setShowSMA(!showSMA)}
-                    style={{
-                        padding: '4px 8px',
-                        fontSize: '0.65rem',
-                        background: showSMA ? 'var(--accent-cyan)' : 'rgba(255,255,255,0.05)',
-                        color: showSMA ? 'black' : 'white',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontWeight: '700'
-                    }}
-                >
-                    SMA 20
-                </button>
-            </div>
+            {/* Indicator Toggles - Only show when sufficient data (20+ points for SMA) */}
+            {data.length >= 20 && (
+                <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 10, display: 'flex', gap: '5px' }}>
+                    <button
+                        onClick={() => setShowSMA(!showSMA)}
+                        style={{
+                            padding: '4px 8px',
+                            fontSize: '0.65rem',
+                            background: showSMA ? 'var(--accent-cyan)' : 'rgba(255,255,255,0.05)',
+                            color: showSMA ? 'black' : 'white',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontWeight: '700'
+                        }}
+                    >
+                        SMA 20
+                    </button>
+                </div>
+            )}
 
             <div style={{
                 width: '100%',
@@ -235,7 +245,7 @@ function StockChart({ symbol, range = '1d', holdings = EMPTY_ARRAY, trades = EMP
                 transition: 'opacity 0.4s ease-out'
             }}>
                 <ResponsiveContainer minWidth={0} minHeight={0}>
-                    <ComposedChart data={processedData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                    <ComposedChart data={processedData} margin={{ top: 10, right: 15, left: -20, bottom: 5 }}>
                         <defs>
                             <linearGradient id="colorUp" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
@@ -262,6 +272,7 @@ function StockChart({ symbol, range = '1d', holdings = EMPTY_ARRAY, trades = EMP
                         />
                         <YAxis
                             domain={['auto', 'auto']}
+                            padding={{ top: 20, bottom: 20 }}
                             orientation="right"
                             tick={{ fontSize: 10, fill: '#64748b' }}
                             axisLine={false}
@@ -273,13 +284,13 @@ function StockChart({ symbol, range = '1d', holdings = EMPTY_ARRAY, trades = EMP
                             content={<CustomTooltip />}
                             cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }}
                         />
-                        <CartesianGrid vertical={false} stroke="#1e293b" strokeDasharray="3 3" />
+                        <CartesianGrid vertical={false} stroke="#1e293b" strokeOpacity={0.4} strokeDasharray="3 3" />
                         <Area
                             type="monotone"
                             dataKey="price"
                             name="Price"
                             stroke={color}
-                            strokeWidth={2}
+                            strokeWidth={1.5}
                             fillOpacity={1}
                             fill={`url(#${gradientId})`}
                         />
@@ -289,7 +300,7 @@ function StockChart({ symbol, range = '1d', holdings = EMPTY_ARRAY, trades = EMP
                                 dataKey="sma"
                                 name="SMA (20)"
                                 stroke="#f59e0b"
-                                strokeWidth={2}
+                                strokeWidth={1.2}
                                 dot={false}
                             />
                         )}

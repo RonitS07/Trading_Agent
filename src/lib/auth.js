@@ -29,7 +29,7 @@ export const authOptions = {
 
                     return { id: user.id, email: user.email, name: user.name };
                 } catch (e) {
-                    console.error(e);
+                    // console.error(e);
                     return null;
                 }
             }
